@@ -191,6 +191,11 @@ body {
     margin: 5px 0 10px 0;
     text-align: center;
 }
+/* MODIFICACIÓN: Forzar el texto a centrarse en el div y permitir el salto de línea para <br> */
+.mobile-coords {
+    white-space: normal;
+    line-height: 1.4;
+}
 
 /* Map */
 #mapa {
@@ -586,7 +591,7 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
         btnHeader.style.display = 'none';
     }
     
-    // 5. Muestra Coordenadas Originales en MÓVIL (CAMBIO 3)
+    // 5. Muestra Coordenadas Originales en MÓVIL (CAMBIO)
     const infoTotem = document.getElementById('infoTotem');
     let mobileCoordDiv = infoTotem.querySelector('.mobile-coords');
     if (!mobileCoordDiv) {
@@ -595,7 +600,8 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
         infoTotem.insertBefore(mobileCoordDiv, infoTotem.firstChild); 
     }
     if (orig_coords && orig_coords !== "PENDIENTE") {
-        mobileCoordDiv.innerHTML = `Coordenadas: ${orig_coords}`; /* Texto cambiado de 'Base' a 'Coordenadas' */
+        /* *** MODIFICACIÓN SOLICITADA: Coordenadas en dos líneas para vista móvil *** */
+        mobileCoordDiv.innerHTML = `Coordenadas:<br>${orig_coords}`; 
         mobileCoordDiv.style.display = 'block'; 
     } else {
         mobileCoordDiv.style.display = 'none';

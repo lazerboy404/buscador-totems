@@ -15,7 +15,9 @@
     --accent-blue: #007bff;
     --accent-hover: #0056b3;
     --accent-red: #dc3545; 
-    --accent-green: #28a745;
+    --accent-red-intense: #D32F2F; /* Rojo más intenso */
+    --accent-green: #28a745; 
+    --accent-yellow-vibrant: #F3C427; /* <<< MODIFICADO AL NUEVO TONO */
     --border-color: #444;
     --font-main: 'Helvetica Neue', Arial, sans-serif; 
     --font-data: 'Roboto Mono', monospace;
@@ -176,7 +178,7 @@ body {
 .data-row:last-child { border-bottom: none; }
 .data-row:hover { background-color: var(--highlight-row); }
 
-/* --- ESTILOS DE PROVEEDORES (PUNTO 1 MODIFICADO) --- */
+/* --- ESTILOS DE PROVEEDORES --- */
 .provider-tag {
     padding: 4px 8px;
     border-radius: 4px;
@@ -218,7 +220,7 @@ body {
     min-height: 150px;
 }
 
-/* MAP INFO (PUNTO 2 MODIFICADO) */
+/* MAP INFO */
 #mapaInfo {
     display: flex; 
     flex-direction: column;
@@ -227,9 +229,8 @@ body {
     border-radius: 4px;
     font-size: 1em; 
     font-family: var(--font-main);
-    margin-bottom: 12px; /* Margen inferior para separar del mapa */
+    margin-bottom: 12px; 
 }
-/* Ocultar si no está visible */
 #mapaInfo:not(.visible) {
     display: none;
 }
@@ -239,7 +240,7 @@ body {
     margin: 4px 0; 
 }
 
-/* --- ESTILO DE MARCATEXTOS (FONDO DE COLOR Y LETRAS BLANCAS) --- */
+/* --- ESTILO DE MARCATEXTOS --- */
 .highlight-text {
     font-weight: bold;
     color: white !important; 
@@ -291,7 +292,7 @@ body {
 
 /* --- FIN GRUPO DE INPUT --- */
 
-/* --- BOTÓN DE DISTANCIA MOVIDO AL TÍTULO (PUNTO 2) --- */
+/* --- BOTÓN DE DISTANCIA MOVIDO AL TÍTULO --- */
 #reubicacion-btn-header {
     display: none; /* Oculto por defecto */
     padding: 6px 12px; 
@@ -305,6 +306,22 @@ body {
     align-self: flex-end;
     margin-bottom: -5px;
     transition: background-color 0.2s;
+    
+    text-align: center;
+    line-height: 1.4;
+}
+
+/* *** MODIFICACIÓN CSS: Estilo de alerta más visible *** */
+#alertaDistancia {
+    display: none; /* Oculto por defecto */
+    color: var(--accent-red-intense); /* Letras rojas intensas */
+    background-color: var(--accent-yellow-vibrant); /* Fondo amarillo vibrante */
+    font-weight: bold;
+    text-align: center;
+    font-size: 1em; /* Ajustado de 0.9em a 1em */
+    margin: -5px 0 10px 0; 
+    padding: 8px; 
+    border-radius: 4px; 
 }
 
 .map-info-line {
@@ -334,17 +351,10 @@ body {
     .search-container button { margin: 8px 5px 0; flex-grow: 1; max-width: 45%; } 
     .coord-input-group { flex-direction: column; }
     #coordInput, #compararBtn { width: 100%; }
-
-    /* Muestra las coordenadas originales solo en móvil */
-    .mobile-coords {
-        display: block; 
-    }
+    .mobile-coords { display: block; }
 }
 @media (min-width: 1001px) {
-    /* Asegurar que esté oculto en PC */
-    .mobile-coords {
-        display: none !important; 
-    }
+    .mobile-coords { display: none !important; }
 }
 @media (max-width: 800px) {
     .data-row { font-size: 0.9em; padding: 6px 0; } 
@@ -385,7 +395,7 @@ body {
 
 <div class="search-container">
     <div class="search-input-group">
-        <input type="text" id="idInput" placeholder="Ingresa MC1234 o 1234 para buscar..." onkeyup="if(event.key === 'Enter') buscarID()">
+        <input type="text" id="idInput" placeholder="MC1234 o 1234 para buscar" onkeyup="if(event.key === 'Enter') buscarID()">
         <button onclick="buscarID()">BUSCAR ID</button>
         <button id="limpiarBtn" onclick="limpiarTodo()">LIMPIAR</button>
     </div>
@@ -404,6 +414,8 @@ body {
             <span id="reubicacion-btn-header" style="display:none;"></span>
         </h2>
         
+        <p id="alertaDistancia"></p>
+
         <div id="mapaInfo" class="map-footer">
             <div id="ubicacion-line" class="map-info-line">
                 <p>Ubicación: [PENDIENTE]</p>
@@ -452,7 +464,6 @@ async function cargarDatos() {
         const r = await fetch(DATA_URL);
         if (!r.ok) throw new Error();
         totemData = await r.json();
-        // MODIFICACIÓN 2: Texto de éxito actualizado
         info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
     } catch {
         info.innerHTML = `<p class="status-message" style="color:red;">Error al cargar datos.</p>`;
@@ -494,7 +505,7 @@ function buscarID() {
     if (!data) {
         info.innerHTML = `<p class="status-message" style="color:red;">ID ${id} no encontrado.</p>`;
         document.getElementById('mapaInfo').classList.remove('visible'); 
-        actualizarInfoMapa(null, null, null, null); 
+        actualizarInfoMapa(null, null, null, null, 0); 
         return;
     }
     
@@ -527,7 +538,6 @@ function limpiarTodo() {
     document.getElementById('coordInput').value = '';
     
     limpiarMapa(true); 
-    // MODIFICACIÓN 2: Texto de éxito actualizado
     document.getElementById('infoTotem').innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
     document.getElementById('mapaInfo').classList.remove('visible'); 
 }
@@ -539,11 +549,12 @@ function limpiarMarcadoresYPolilinea() {
     polyline = null;
     
     document.getElementById('reubicacion-btn-header').style.display = 'none'; 
+    document.getElementById('alertaDistancia').style.display = 'none'; 
     
     if (currentActiveData) {
         const ubicacion = `${currentActiveData.COLONIA || 'N/A'}, ${currentActiveData.ALCALDIA || 'N/A'}`;
         const orig_coords_str = `${(currentActiveData.LATITUD || currentActiveData.latitud || currentActiveData.Latitude).toFixed(6)}, ${(currentActiveData.LONGITUD || currentActiveData.longitud || currentActiveData.Longitude).toFixed(6)}`;
-        actualizarInfoMapa(ubicacion, orig_coords_str, null, "0 m");
+        actualizarInfoMapa(ubicacion, orig_coords_str, null, "0 m", 0); 
     }
 
     if (markerOriginal) {
@@ -561,20 +572,25 @@ function limpiarMapa(clearInputs = false) {
     currentActiveData = null;
     
     document.getElementById('reubicacion-btn-header').style.display = 'none'; 
+    document.getElementById('alertaDistancia').style.display = 'none'; 
     
     if (clearInputs) {
-        actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null);
+        actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null, 0); 
     } else {
-        actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null);
+        actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null, 0); 
         map.setView([19.4326, -99.1332], 12);
     }
 }
 
-function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
+// 'distanceM' es la distancia en metros
+function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM) {
     const ubicacionLine = document.getElementById('ubicacion-line');
     const coordenadasLine = document.getElementById('coordenadas-line');
     const coordNuevaLine = document.getElementById('coordenadas-nueva-line');
     const btnHeader = document.getElementById('reubicacion-btn-header');
+    
+    const alertaDistancia = document.getElementById('alertaDistancia');
+    alertaDistancia.style.display = 'none'; 
 
     ubicacionLine.innerHTML = `<p>Ubicación: ${ubicacion || '[NO ENCONTRADA]'}</p>`;
     coordenadasLine.innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Original)</span>: ${orig_coords || '[NO ENCONTRADA]'}</p>`;
@@ -586,11 +602,23 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
         coordNuevaLine.style.display = 'none'; 
     }
     
-    if (distancia && distancia !== "0 m" && distancia !== "N/A" && new_coords) {
-        btnHeader.textContent = `REUBICACIÓN: ${distancia}`;
-        btnHeader.style.display = 'inline-block';
+    if (new_coords) {
+        if (distanceM <= 8) {
+            btnHeader.innerHTML = `UBICACIÓN COINCIDE<br>${distancia}`; 
+            btnHeader.style.backgroundColor = 'var(--accent-green)'; 
+            btnHeader.style.display = 'inline-block';
+        } else {
+            btnHeader.innerHTML = `REUBICACIÓN: ${distancia}`; 
+            btnHeader.style.backgroundColor = 'var(--accent-red)'; 
+            btnHeader.style.display = 'inline-block';
+
+            if (distanceM > 100) {
+                alertaDistancia.textContent = '☠️ ¡Atención! La distancia excede los 100 metros permitidos. ☠️';
+                alertaDistancia.style.display = 'block';
+            }
+        }
     } else {
-        btnHeader.style.display = 'none';
+        btnHeader.style.display = 'none'; 
     }
     
     const infoTotem = document.getElementById('infoTotem');
@@ -653,9 +681,10 @@ function actualizarMapa(d, coordsStr) {
     const orig_coords_str = `${orig_lat.toFixed(6)}, ${orig_lon.toFixed(6)}`;
     let new_coords_str = null;
     let distanceDisplay = "0 m";
+    let distanceM = 0; 
 
     if (isNaN(orig_lat) || isNaN(orig_lon)) { 
-        actualizarInfoMapa(ubicacion, "N/A", null, null);
+        actualizarInfoMapa(ubicacion, "N/A", null, null, 0); 
         return; 
     }
 
@@ -680,37 +709,42 @@ function actualizarMapa(d, coordsStr) {
     let focusPoint = [orig_lat, orig_lon];
 
     if (coordsStr) {
-        const [new_lat_str, new_lon_str] = coordsStr.split(',');
-        const new_lat = parseFloat(new_lat_str);
-        const new_lon = parseFloat(new_lon_str);
+        
+        let cleanStr = coordsStr.trim().replace(',', ' ');
+        const parts = cleanStr.split(/\s+/).filter(Boolean);
 
-        if (!isNaN(new_lat) && !isNaN(new_lon)) {
-            
-            const redIcon = new L.Icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            });
-            
-            new_coords_str = `${new_lat.toFixed(6)}, ${new_lon.toFixed(6)}`;
+        if (parts.length === 2) {
+            const new_lat = parseFloat(parts[0].replace(',', '.'));
+            const new_lon = parseFloat(parts[1].replace(',', '.'));
 
-            markerNew = L.marker([new_lat, new_lon], { icon: redIcon })
-                .addTo(map)
-                .bindPopup(`<strong>${activoID}</strong><br><span style="color: #dc3545;">UBICACIÓN NUEVA</span><br>${new_coords_str}`).openPopup();
-            
-            const latlngs = [ [orig_lat, orig_lon], [new_lat, new_lon] ];
-            polyline = L.polyline(latlngs, {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
+            if (!isNaN(new_lat) && !isNaN(new_lon)) {
+                
+                const redIcon = new L.Icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                });
+                
+                new_coords_str = `${new_lat.toFixed(6)}, ${new_lon.toFixed(6)}`;
 
-            const distanceKm = getDistance(orig_lat, orig_lon, new_lat, new_lon);
-            const distanceM = distanceKm * 1000;
-            distanceDisplay = distanceKm < 0.05 ? `${distanceM.toFixed(2)} m` : `${distanceKm.toFixed(2)} km`; 
+                markerNew = L.marker([new_lat, new_lon], { icon: redIcon })
+                    .addTo(map)
+                    .bindPopup(`<strong>${activoID}</strong><br><span style="color: #dc3545;">NUEVA UBICACIÓN</span><br>${new_coords_str}`).openPopup();
+                
+                const latlngs = [ [orig_lat, orig_lon], [new_lat, new_lon] ];
+                polyline = L.polyline(latlngs, {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
 
-            bounds.push([new_lat, new_lon]);
-            map.fitBounds(bounds, { padding: [50, 50] });
-            focusPoint = null; 
+                const distanceKm = getDistance(orig_lat, orig_lon, new_lat, new_lon);
+                distanceM = distanceKm * 1000;
+                distanceDisplay = distanceKm < 1 ? `${distanceM.toFixed(2)} m` : `${distanceKm.toFixed(2)} km`; 
+
+                bounds.push([new_lat, new_lon]);
+                map.fitBounds(bounds, { padding: [50, 50] });
+                focusPoint = null; 
+            }
         }
     } else {
         limpiarMarcadoresYPolilinea(); 
@@ -719,7 +753,7 @@ function actualizarMapa(d, coordsStr) {
         }
     }
 
-    actualizarInfoMapa(ubicacion, orig_coords_str, new_coords_str, distanceDisplay);
+    actualizarInfoMapa(ubicacion, orig_coords_str, new_coords_str, distanceDisplay, distanceM);
     
     setTimeout(() => map.invalidateSize(), 100);
 }

@@ -20,6 +20,10 @@
     --font-main: 'Helvetica Neue', Arial, sans-serif; 
     --font-data: 'Roboto Mono', monospace;
     --highlight-row: #3a3a3a; 
+
+    /* COLORES DE PROVEEDORES */
+    --color-telmex: #007bff; /* Azul */
+    --color-omnia: #ff8c00; /* Naranja */
 }
 
 /* General */
@@ -74,15 +78,13 @@ body {
 }
 .search-container button {
     padding: 12px 18px; 
-    /* Base style for all search buttons */
     color: var(--text-light);
     border: none;
     cursor: pointer;
     font-family: var(--font-main);
     font-size: 1.05em; 
-    /* Animación para el efecto de brillo */
     transition: background-color 0.2s, outline 0.2s, transform 0.2s; 
-    border-radius: 4px; /* Asegurar que tienen borde redondeado para el outline */
+    border-radius: 4px; 
 }
 
 /* BOTÓN BUSCAR ID (AZUL) */
@@ -91,10 +93,9 @@ body {
 }
 .search-container button:not(#limpiarBtn):hover { 
     background-color: var(--accent-hover); 
-    /* Efecto de brillo: un outline azul claro */
     outline: 2px solid rgba(0, 123, 255, 0.7); 
     outline-offset: 2px;
-    transform: translateY(-1px); /* Ligero movimiento hacia arriba */
+    transform: translateY(-1px); 
 }
 
 /* Botón Limpiar (GRIS) */
@@ -103,7 +104,6 @@ body {
 }
 #limpiarBtn:hover {
     background-color: #5a6268;
-    /* Efecto de brillo: un outline gris claro */
     outline: 2px solid rgba(108, 117, 125, 0.7); 
     outline-offset: 2px;
     transform: translateY(-1px);
@@ -138,7 +138,7 @@ body {
     padding-bottom: 10px;
     margin-bottom: 12px;
     font-size: 1.6em; 
-    display: flex; /* Nuevo: para alinear el título y el botón de distancia */
+    display: flex;
     justify-content: space-between;
     align-items: center;
 }
@@ -152,7 +152,6 @@ body {
     overflow-y: auto; 
     max-height: 100%;
 }
-/* Estilo para los mensajes de estado (centrado y color) */
 .data-table .status-message {
     text-align: center;
     font-size: 1.1em;
@@ -176,6 +175,22 @@ body {
 }
 .data-row:last-child { border-bottom: none; }
 .data-row:hover { background-color: var(--highlight-row); }
+
+/* --- ESTILOS DE PROVEEDORES (PUNTO 1 MODIFICADO) --- */
+.provider-tag {
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: var(--text-light); /* Texto blanco */
+    font-weight: bold;
+}
+.provider-telmex {
+    background-color: var(--color-telmex); /* Azul */
+}
+.provider-omnia {
+    background-color: var(--color-omnia); /* Naranja */
+}
+/* --- FIN ESTILOS PROVEEDORES --- */
+
 .data-label { width: 45%; font-weight: bold; color: var(--accent-blue); }
 .data-value { width: 55%; color: var(--text-light); word-break: break-word; }
 
@@ -190,9 +205,6 @@ body {
     font-family: var(--font-data);
     margin: 5px 0 10px 0;
     text-align: center;
-}
-/* MODIFICACIÓN: Forzar el texto a centrarse en el div y permitir el salto de línea para <br> */
-.mobile-coords {
     white-space: normal;
     line-height: 1.4;
 }
@@ -204,22 +216,24 @@ body {
     border-radius: 4px;
     flex-grow: 1;
     min-height: 150px;
-    margin-bottom: 12px; 
 }
 
-/* OCULTAR TODO EL MAP-FOOTER POR DEFECTO */
+/* MAP INFO (PUNTO 2 MODIFICADO) */
 #mapaInfo {
-    display: none; 
+    display: flex; 
+    flex-direction: column;
     background-color: #333;
     padding: 12px; 
     border-radius: 4px;
     font-size: 1em; 
     font-family: var(--font-main);
-    flex-direction: column;
+    margin-bottom: 12px; /* Margen inferior para separar del mapa */
 }
-#mapaInfo.visible {
-    display: flex; /* Mostrar cuando se aplica la clase visible */
+/* Ocultar si no está visible */
+#mapaInfo:not(.visible) {
+    display: none;
 }
+
 
 .map-footer p {
     margin: 4px 0; 
@@ -266,11 +280,10 @@ body {
     font-weight: bold;
     font-size: 1em; 
     cursor: pointer;
-    transition: background-color 0.2s, outline 0.2s, transform 0.2s; /* Se añadió outline y transform */
+    transition: background-color 0.2s, outline 0.2s, transform 0.2s; 
 }
 #compararBtn:hover {
     background-color: #a02030;
-    /* Efecto de brillo: un outline rojo claro */
     outline: 2px solid rgba(220, 53, 69, 0.7); 
     outline-offset: 2px;
     transform: translateY(-1px);
@@ -287,9 +300,8 @@ body {
     border: none;
     border-radius: 4px;
     font-weight: bold;
-    font-size: 0.7em; /* Pequeño para encajar en el título */
+    font-size: 0.7em; 
     cursor: default;
-    /* Ajustes visuales para el título */
     align-self: flex-end;
     margin-bottom: -5px;
     transition: background-color 0.2s;
@@ -345,28 +357,21 @@ body {
 }
 
 /* --- ESTILO POP-UP OSCURO --- */
-/* Contenedor principal del Pop-up */
 .leaflet-popup-content-wrapper {
-    background-color: var(--bg-card) !important; /* Fondo oscuro */
-    color: var(--text-light) !important; /* Texto claro (blanco) */
-    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.8); /* Sombra más oscura */
+    background-color: var(--bg-card) !important;
+    color: var(--text-light) !important;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.8);
     border-radius: 6px;
 }
-
-/* La 'cola' o flecha del pop-up */
 .leaflet-popup-tip {
-    background-color: var(--bg-card) !important; /* La cola también debe ser oscura */
+    background-color: var(--bg-card) !important;
 }
-
-/* Contenido interno (para asegurar que los enlaces/textos son claros) */
 .leaflet-popup-content {
     font-size: 1em;
     font-family: var(--font-main);
 }
-
-/* Asegurar que el título (strong) se vea bien */
 .leaflet-popup-content strong {
-    color: var(--text-light); /* Ahora es completamente blanco */
+    color: var(--text-light);
     font-weight: bold;
 }
 /* --- FIN ESTILO POP-UP OSCURO --- */
@@ -380,7 +385,7 @@ body {
 
 <div class="search-container">
     <div class="search-input-group">
-        <input type="text" id="idInput" placeholder="ID de Búsqueda..." onkeyup="if(event.key === 'Enter') buscarID()">
+        <input type="text" id="idInput" placeholder="Ingresa MC1234 o 1234 para buscar..." onkeyup="if(event.key === 'Enter') buscarID()">
         <button onclick="buscarID()">BUSCAR ID</button>
         <button id="limpiarBtn" onclick="limpiarTodo()">LIMPIAR</button>
     </div>
@@ -398,7 +403,6 @@ body {
             UBICACIÓN GEOGRÁFICA
             <span id="reubicacion-btn-header" style="display:none;"></span>
         </h2>
-        <div id="mapa"></div>
         
         <div id="mapaInfo" class="map-footer">
             <div id="ubicacion-line" class="map-info-line">
@@ -417,6 +421,9 @@ body {
                 <button id="compararBtn" onclick="compararCoordenadas()">COMPARAR</button>
             </div>
         </div>
+
+        <div id="mapa"></div>
+        
     </section>
 </main>
 
@@ -445,7 +452,8 @@ async function cargarDatos() {
         const r = await fetch(DATA_URL);
         if (!r.ok) throw new Error();
         totemData = await r.json();
-        info.innerHTML = `<p class="status-message status-success">DATOS CARGADOS. Ingrese un ID.</p>`;
+        // MODIFICACIÓN 2: Texto de éxito actualizado
+        info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
     } catch {
         info.innerHTML = `<p class="status-message" style="color:red;">Error al cargar datos.</p>`;
     }
@@ -468,7 +476,6 @@ function buscarID() {
     const id = document.getElementById('idInput').value.trim().toUpperCase();
     const info = document.getElementById('infoTotem');
     
-    // MEJORA: Limpiar el campo de coordenadas de reubicación y sus indicadores
     document.getElementById('coordInput').value = ''; 
     
     limpiarMapa(false); 
@@ -476,7 +483,6 @@ function buscarID() {
 
     if (!id) { info.innerHTML = `<p class="status-message">Ingrese un ID.</p>`; return; }
     
-    // Búsqueda flexible
     let normalizedId = id;
     if (!id.startsWith('MC')) {
         normalizedId = 'MC' + id;
@@ -521,7 +527,8 @@ function limpiarTodo() {
     document.getElementById('coordInput').value = '';
     
     limpiarMapa(true); 
-    document.getElementById('infoTotem').innerHTML = `<p class="status-message status-success">DATOS CARGADOS. Ingrese un ID.</p>`;
+    // MODIFICACIÓN 2: Texto de éxito actualizado
+    document.getElementById('infoTotem').innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
     document.getElementById('mapaInfo').classList.remove('visible'); 
 }
 
@@ -569,13 +576,9 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
     const coordNuevaLine = document.getElementById('coordenadas-nueva-line');
     const btnHeader = document.getElementById('reubicacion-btn-header');
 
-    // 1. Ubicación
     ubicacionLine.innerHTML = `<p>Ubicación: ${ubicacion || '[NO ENCONTRADA]'}</p>`;
-
-    // 2. Coordenadas Originales (Azul)
     coordenadasLine.innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Original)</span>: ${orig_coords || '[NO ENCONTRADA]'}</p>`;
     
-    // 3. Coordenadas Nuevas (Rojo)
     if (new_coords) {
         coordNuevaLine.innerHTML = `<p><span class="coord-nueva highlight-text">Coordenadas (Nuevas)</span>: ${new_coords}</p>`;
         coordNuevaLine.style.display = 'flex'; 
@@ -583,7 +586,6 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
         coordNuevaLine.style.display = 'none'; 
     }
     
-    // 4. Distancia de Reubicación (Botón en Header)
     if (distancia && distancia !== "0 m" && distancia !== "N/A" && new_coords) {
         btnHeader.textContent = `REUBICACIÓN: ${distancia}`;
         btnHeader.style.display = 'inline-block';
@@ -591,7 +593,6 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
         btnHeader.style.display = 'none';
     }
     
-    // 5. Muestra Coordenadas Originales en MÓVIL (CAMBIO)
     const infoTotem = document.getElementById('infoTotem');
     let mobileCoordDiv = infoTotem.querySelector('.mobile-coords');
     if (!mobileCoordDiv) {
@@ -600,7 +601,6 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia) {
         infoTotem.insertBefore(mobileCoordDiv, infoTotem.firstChild); 
     }
     if (orig_coords && orig_coords !== "PENDIENTE") {
-        /* *** MODIFICACIÓN SOLICITADA: Coordenadas en dos líneas para vista móvil *** */
         mobileCoordDiv.innerHTML = `Coordenadas:<br>${orig_coords}`; 
         mobileCoordDiv.style.display = 'block'; 
     } else {
@@ -617,9 +617,23 @@ function mostrarInformacion(data, cont) {
     for (const k in data) {
         if (excl.includes(k)) continue; 
         
+        const key = k.toUpperCase().trim();
+        const value = String(data[k]);
+        let displayValue = value; 
+        
+        if (key.includes('PROVEEDOR') || key === 'TIPO') {
+            const upperValue = value.toUpperCase().trim();
+            
+            if (upperValue === 'TELMEX') {
+                displayValue = `<span class="provider-tag provider-telmex">${value}</span>`;
+            } else if (upperValue === 'OMNIA') {
+                displayValue = `<span class="provider-tag provider-omnia">${value}</span>`;
+            }
+        }
+        
         html += `<div class="data-row">
             <div class="data-label">${k.replace('_',' ')}</div>
-            <div class="data-value">${data[k]}</div></div>`;
+            <div class="data-value">${displayValue}</div></div>`;
     }
     
     const mobileCoordDiv = cont.querySelector('.mobile-coords');
@@ -633,7 +647,6 @@ function actualizarMapa(d, coordsStr) {
     const orig_lat = parseFloat(d.LATITUD || d.latitud || d.Latitude);
     const orig_lon = parseFloat(d.LONGITUD || d.longitud || d.Longitude);
     
-    // Obtener el ID para mostrarlo en los pop-ups del mapa
     const activoID = d.ID || d.id || 'N/A';
     
     const ubicacion = `${d.COLONIA || 'N/A'}, ${d.ALCALDIA || 'N/A'}`;
@@ -646,14 +659,12 @@ function actualizarMapa(d, coordsStr) {
         return; 
     }
 
-    // 1. Crear marcador original si no existe
     if (!markerOriginal) {
-        // CORRECCIÓN DEL ANCLAJE DEL PIN AZUL
         const blueIcon = new L.Icon({
             iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png',
             shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png',
             iconSize: [25, 41],
-            iconAnchor: [12, 41], // Clave para alinear la línea al pico del pin azul
+            iconAnchor: [12, 41],
             popupAnchor: [1, -34],
             shadowSize: [41, 41]
         });
@@ -665,12 +676,9 @@ function actualizarMapa(d, coordsStr) {
          map.setView([orig_lat, orig_lon], 15);
     }
     
-    let bounds = [
-        [orig_lat, orig_lon]
-    ];
+    let bounds = [ [orig_lat, orig_lon] ];
     let focusPoint = [orig_lat, orig_lon];
 
-    // 2. Procesar coordenadas nuevas
     if (coordsStr) {
         const [new_lat_str, new_lon_str] = coordsStr.split(',');
         const new_lat = parseFloat(new_lat_str);
@@ -689,37 +697,28 @@ function actualizarMapa(d, coordsStr) {
             
             new_coords_str = `${new_lat.toFixed(6)}, ${new_lon.toFixed(6)}`;
 
-            // Crear marcador nuevo
             markerNew = L.marker([new_lat, new_lon], { icon: redIcon })
                 .addTo(map)
                 .bindPopup(`<strong>${activoID}</strong><br><span style="color: #dc3545;">UBICACIÓN NUEVA</span><br>${new_coords_str}`).openPopup();
             
-            // 3. Dibujar Polilínea
-            const latlngs = [
-                [orig_lat, orig_lon],
-                [new_lat, new_lon]
-            ];
+            const latlngs = [ [orig_lat, orig_lon], [new_lat, new_lon] ];
             polyline = L.polyline(latlngs, {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
 
-            // 4. Calcular Distancia
             const distanceKm = getDistance(orig_lat, orig_lon, new_lat, new_lon);
             const distanceM = distanceKm * 1000;
             distanceDisplay = distanceKm < 0.05 ? `${distanceM.toFixed(2)} m` : `${distanceKm.toFixed(2)} km`; 
 
-            // Ajustar el foco del mapa para incluir ambos puntos
             bounds.push([new_lat, new_lon]);
             map.fitBounds(bounds, { padding: [50, 50] });
             focusPoint = null; 
         }
     } else {
-        // Si no hay coordsStr, asegurarse de que solo se muestre el punto original
         limpiarMarcadoresYPolilinea(); 
         if (markerOriginal) {
             map.setView([orig_lat, orig_lon], 15);
         }
     }
 
-    // 5. Actualizar Info Footer
     actualizarInfoMapa(ubicacion, orig_coords_str, new_coords_str, distanceDisplay);
     
     setTimeout(() => map.invalidateSize(), 100);

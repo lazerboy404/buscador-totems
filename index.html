@@ -419,7 +419,7 @@ body {
 @media (max-width: 1000px) {
     body { overflow-y: auto; }
     .content-wrapper {
-        flex-direction: column;
+        flex-direction: column-reverse; /* <-- ¡ESTE ES EL CAMBIO! */
         align-items: center;
         gap: 20px;
         padding: 0 15px 30px;
@@ -479,10 +479,10 @@ body {
 
 <div class="search-container">
     
-    <label for="idInput" class="search-label">ID del Tótem (o pega el texto aquí):</label>
+    <label for="idInput" class="search-label">ID del Tótem (o pega el mensaje completo de whatsapp):</label>
 
     <div class="search-input-group">
-        <input type="text" id="idInput" placeholder="MC1234 o 1234 para buscar" onkeyup="if(event.key === 'Enter') buscarID()">
+        <input type="text" id="idInput" placeholder="Pegar aquí..." onkeyup="if(event.key === 'Enter') buscarID()">
         <button onclick="buscarID()">BUSCAR ID</button>
         <button id="limpiarBtn" onclick="limpiarTodo()">LIMPIAR</button>
     </div>

@@ -274,7 +274,7 @@ body {
 }
 #compararBtn {
     padding: 10px 18px; 
-    background-color: var(--accent-red);
+    background-color: #6c757d; /* <-- CAMBIO DE COLOR */
     color: white;
     border: none;
     border-radius: 4px;
@@ -284,8 +284,8 @@ body {
     transition: background-color 0.2s, outline 0.2s, transform 0.2s; 
 }
 #compararBtn:hover {
-    background-color: #a02030;
-    outline: 2px solid rgba(220, 53, 69, 0.7); 
+    background-color: #5a6268; /* <-- CAMBIO DE COLOR (HOVER) */
+    outline: 2px solid rgba(108, 117, 125, 0.7);  /* <-- CAMBIO DE OUTLINE (HOVER) */
     outline-offset: 2px;
     transform: translateY(-1px);
 }
@@ -330,6 +330,31 @@ body {
     align-items: center;
     margin: 4px 0; 
 }
+
+/* --- INICIO: ANIMACIÓN DE "PEGADO" --- */
+@keyframes flash-highlight {
+    from {
+        /* Inicia brillante */
+        background-color: var(--accent-yellow-vibrant);
+        color: #1e1e1e; /* Texto oscuro para contraste */
+        transform: scale(1.02); /* Un pequeño "pop" */
+        border-color: var(--accent-yellow-vibrant);
+    }
+    to {
+        /* Vuelve al color normal del input */
+        background-color: #444; 
+        color: var(--text-light);
+        transform: scale(1.0);
+        border-color: var(--border-color);
+    }
+}
+
+.flash-on-paste {
+    /* Ejecuta la animación "flash-highlight" durante 0.6s, una vez */
+    animation: flash-highlight 0.6s ease-out 1;
+}
+/* --- FIN: ANIMACIÓN DE "PEGADO" --- */
+
 
 /* ---------------- RESPONSIVE ADAPTIVE SIZING ---------------- */
 @media (max-width: 1000px) {
@@ -395,7 +420,7 @@ body {
 
 <div class="search-container">
     <div class="search-input-group">
-        <input type="text" id="idInput" placeholder="MC1234 o 1234 para buscar" onkeyup="if(event.key === 'Enter') buscarID()">
+        <input type="text" id="idInput" placeholder="Pega el mensaje completo de whatsapp.." onkeyup="if(event.key === 'Enter') buscarID()">
         <button onclick="buscarID()">BUSCAR ID</button>
         <button id="limpiarBtn" onclick="limpiarTodo()">LIMPIAR</button>
     </div>
@@ -446,6 +471,7 @@ body {
 <script>
 let totemData = [], map = null, markerOriginal = null, markerNew = null, polyline = null;
 let currentActiveData = null; 
+let cachedNewCoordinates = null; // <-- Variable global (caché)
 const DATA_URL = "https://raw.githubusercontent.com/lazerboy404/buscador-totems/main/csvjson.json";
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -470,7 +496,7 @@ async function cargarDatos() {
     }
 }
 
-// Haversine formula
+// Haversine formula (Función original, sin cambios)
 function getDistance(lat1, lon1, lat2, lon2) {
     const R = 6371; 
     const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -482,13 +508,99 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * c; // Distancia en km
 }
 
+// *** FUNCIÓN DE AYUDA REESCRITA (CON AUTOCORRECCIÓN MÁS FLEXIBLE) ***
+function findAllCoordinateNumbers(text) {
+    if (!text) return [];
 
+    // Regex 1: Números con decimal (ej. -99.12345)
+    const floatRegex = /-?\d+\.\d+/g;
+    // Regex 2: Enteros largos (7-11 dígitos) que *probablemente* son coords sin punto
+    const intRegex = /-?\d{7,11}/g; // <-- LÍMITE INFERIOR ES 7
+
+    // Buscar todos los números que coincidan con CUALQUIERA de las regex
+    const allMatches = text.match(new RegExp(floatRegex.source + '|' + intRegex.source, 'g')) || [];
+
+    // Ahora, procesar los resultados para "corregir" los que no tienen punto
+    const correctedNumbers = allMatches.map(num => {
+        // Si ya tiene punto, está bien.
+        if (num.includes('.')) {
+            return num;
+        }
+
+        // --- INICIO DE LA AUTOCORRECCIÓN ---
+        
+        // Caso Longitud: Empieza con -9, -1, etc. (ej. -9912825)
+        if (num.startsWith('-') && (num.startsWith('-9') || num.startsWith('-1'))) {
+            if (num.length >= 8) { // (ej. -9912345)
+                // Inserta el punto después de los 3 primeros caracteres: -99.
+                return num.substring(0, 3) + '.' + num.substring(3);
+            }
+        }
+        
+        // Caso Latitud: Empieza con 1, 2, etc. (ej. 1912345)
+        if (!num.startsWith('-') && (num.startsWith('1') || num.startsWith('2'))) {
+             if (num.length >= 7) { // (ej. 1912345)
+                // Inserta el punto después de los 2 primeros caracteres: 19.
+                return num.substring(0, 2) + '.' + num.substring(2);
+            }
+        }
+        
+        // Si es un entero que no reconocemos, lo descartamos.
+        return null;
+
+    }).filter(Boolean); // Elimina cualquier 'null' que hayamos devuelto
+
+    return correctedNumbers;
+}
+
+
+// === FUNCIÓN BUSCAR ID (MODIFICADA CON LÓGICA ROBUSTA) ===
 function buscarID() {
-    const id = document.getElementById('idInput').value.trim().toUpperCase();
+    // --- EXTRACCIÓN DE ID ---
+    const idInput = document.getElementById('idInput');
+    const rawIdText = idInput.value;
+    let id = '';
+    const idRegex = /MC\d+/i;
+    const idMatch = rawIdText.match(idRegex);
+
+    if (idMatch) {
+        id = idMatch[0].toUpperCase();
+    } else {
+        id = rawIdText.trim().toUpperCase();
+    }
+    idInput.value = id; 
+    
     const info = document.getElementById('infoTotem');
+    const coordInput = document.getElementById('coordInput');
     
-    document.getElementById('coordInput').value = ''; 
+    // --- LÓGICA DE CACHÉ ---
+    cachedNewCoordinates = null; 
+    let firstCoordsStr = null;
     
+    const newCoordMarkers = /NUEVAS COORDENADAS|REUBICACIÓN|UBICACIÓN SUGERIDA/i;
+    const newMatch = rawIdText.match(newCoordMarkers);
+    
+    let textForFirstSearch = rawIdText;
+    let textForNewSearch = null;
+
+    if (newMatch) {
+        textForFirstSearch = rawIdText.substring(0, newMatch.index);
+        textForNewSearch = rawIdText.substring(newMatch.index);
+        
+        const newNumbers = findAllCoordinateNumbers(textForNewSearch);
+        if (newNumbers.length >= 2) {
+            cachedNewCoordinates = [newNumbers[0], newNumbers[1]];
+        }
+    }
+
+    const firstNumbers = findAllCoordinateNumbers(textForFirstSearch);
+    if (firstNumbers.length >= 2) {
+        firstCoordsStr = `${firstNumbers[0]}, ${firstNumbers[1]}`; 
+    }
+    
+    coordInput.value = firstCoordsStr || '';
+    // --- FIN LÓGICA DE CACHÉ ---
+
     limpiarMapa(false); 
     currentActiveData = null; 
 
@@ -510,38 +622,65 @@ function buscarID() {
     }
     
     currentActiveData = data; 
-    
     document.getElementById('mapaInfo').classList.add('visible'); 
-
-    const coordsStr = document.getElementById('coordInput').value.trim(); 
     
     mostrarInformacion(data, info); 
-    actualizarMapa(data, coordsStr || null);
+    
+    const finalCoordsToMap = document.getElementById('coordInput').value.trim();
+    actualizarMapa(data, finalCoordsToMap || null); 
 }
 
 
+// === FUNCIÓN COMPARAR COORDENADAS (MODIFICADA CON ANIMACIÓN) ===
 function compararCoordenadas() {
     if (!currentActiveData) {
         document.getElementById('infoTotem').innerHTML = `<p class="status-message" style="color:red;">Error: Busque un ID primero.</p>`;
         return;
     }
     
-    const coordsStr = document.getElementById('coordInput').value.trim(); 
+    const coordInput = document.getElementById('coordInput'); // <--- 1. Obtener el elemento
+    let coordsStrToCompare = null;
+
+    if (cachedNewCoordinates && cachedNewCoordinates.length === 2) {
+        coordsStrToCompare = `${cachedNewCoordinates[0]}, ${cachedNewCoordinates[1]}`;
+        coordInput.value = coordsStrToCompare; 
+        cachedNewCoordinates = null; 
+        
+        // --- ¡INICIO DE LA ANIMACIÓN! ---
+        coordInput.classList.remove('flash-on-paste'); // <--- 2. Limpiar animación anterior
+        void coordInput.offsetWidth; // <--- 3. Forzar repintado del navegador (truco)
+        coordInput.classList.add('flash-on-paste'); // <--- 4. Aplicar animación
+        // --- FIN DE LA ANIMACIÓN ---
+    
+    } else {
+        const rawCoordText = coordInput.value;
+        const numbersInInput = findAllCoordinateNumbers(rawCoordText);
+        
+        if (numbersInInput.length >= 2) {
+            coordsStrToCompare = `${numbersInInput[0]}, ${numbersInInput[1]}`;
+            coordInput.value = coordsStrToCompare;
+        } else {
+            coordInput.value = '';
+        }
+    }
     
     limpiarMarcadoresYPolilinea(); 
     mostrarInformacion(currentActiveData, document.getElementById('infoTotem'));
-    actualizarMapa(currentActiveData, coordsStr);
+    actualizarMapa(currentActiveData, coordsStrToCompare);
 }
 
+// (Función original, sin cambios)
 function limpiarTodo() {
     document.getElementById('idInput').value = '';
     document.getElementById('coordInput').value = '';
+    cachedNewCoordinates = null; // Limpiar caché
     
     limpiarMapa(true); 
     document.getElementById('infoTotem').innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
     document.getElementById('mapaInfo').classList.remove('visible'); 
 }
 
+// (Función original, sin cambios)
 function limpiarMarcadoresYPolilinea() {
     if (markerNew) map.removeLayer(markerNew);
     if (polyline) map.removeLayer(polyline);
@@ -562,6 +701,7 @@ function limpiarMarcadoresYPolilinea() {
     }
 }
 
+// (Función original, sin cambios)
 function limpiarMapa(clearInputs = false) {
     if (markerOriginal) map.removeLayer(markerOriginal);
     if (markerNew) map.removeLayer(markerNew);
@@ -582,7 +722,7 @@ function limpiarMapa(clearInputs = false) {
     }
 }
 
-// 'distanceM' es la distancia en metros
+// (Función original, sin cambios)
 function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM) {
     const ubicacionLine = document.getElementById('ubicacion-line');
     const coordenadasLine = document.getElementById('coordenadas-line');
@@ -637,6 +777,7 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, dista
 }
 
 
+// === FUNCIÓN MOSTRAR INFORMACIÓN (CORREGIDA) ===
 function mostrarInformacion(data, cont) {
     let html = '';
     
@@ -659,6 +800,7 @@ function mostrarInformacion(data, cont) {
             }
         }
         
+        // ¡Este es el error que corregí!
         html += `<div class="data-row">
             <div class="data-label">${k.replace('_',' ')}</div>
             <div class="data-value">${displayValue}</div></div>`;
@@ -671,6 +813,7 @@ function mostrarInformacion(data, cont) {
     }
 }
 
+// === FUNCIÓN ACTUALIZAR MAPA (¡CON CAMBIO DE POPUP!) ===
 function actualizarMapa(d, coordsStr) {
     const orig_lat = parseFloat(d.LATITUD || d.latitud || d.Latitude);
     const orig_lon = parseFloat(d.LONGITUD || d.longitud || d.Longitude);
@@ -709,18 +852,36 @@ function actualizarMapa(d, coordsStr) {
     let focusPoint = [orig_lat, orig_lon];
 
     if (coordsStr) {
+        // Lógica de extracción de números (robusta)
+        const numberRegex = new RegExp(/-?\d+(\.\d+)?/g);
+        const parts = coordsStr.match(numberRegex);
         
-        let cleanStr = coordsStr.trim().replace(',', ' ');
-        const parts = cleanStr.split(/\s+/).filter(Boolean);
-
-        if (parts.length === 2) {
-            const new_lat = parseFloat(parts[0].replace(',', '.'));
-            const new_lon = parseFloat(parts[1].replace(',', '.'));
+        if (parts && parts.length === 2) {
+            // ¡LOS NÚMEROS AHORA VIENEN CORREGIDOS!
+            const new_lat = parseFloat(parts[0]);
+            const new_lon = parseFloat(parts[1]);
 
             if (!isNaN(new_lat) && !isNaN(new_lon)) {
                 
-                const redIcon = new L.Icon({
-                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                // --- Cálculo de distancia (se mueve aquí para decidir el pin) ---
+                const distanceKm = getDistance(orig_lat, orig_lon, new_lat, new_lon);
+                distanceM = distanceKm * 1000;
+                distanceDisplay = distanceKm < 1 ? `${distanceM.toFixed(2)} m` : `${distanceKm.toFixed(2)} km`; 
+
+                // --- ¡INICIO DE LA NUEVA LÓGICA DE POPUP! ---
+                let popupColor = 'var(--accent-red)'; // Default: #dc3545
+                let popupText = 'NUEVA UBICACIÓN';
+                let markerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png';
+
+                if (distanceM <= 8) {
+                    popupColor = 'var(--accent-green)'; // Green: #28a745
+                    popupText = 'UBICACIÓN COINCIDE';
+                    markerIconUrl = 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png'; // Pin Verde
+                }
+                // --- FIN DE LA NUEVA LÓGICA DE POPUP! ---
+
+                const newIcon = new L.Icon({
+                    iconUrl: markerIconUrl,
                     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
                     iconSize: [25, 41],
                     iconAnchor: [12, 41],
@@ -730,16 +891,13 @@ function actualizarMapa(d, coordsStr) {
                 
                 new_coords_str = `${new_lat.toFixed(6)}, ${new_lon.toFixed(6)}`;
 
-                markerNew = L.marker([new_lat, new_lon], { icon: redIcon })
+                markerNew = L.marker([new_lat, new_lon], { icon: newIcon }) // <-- Usa el nuevo icono
                     .addTo(map)
-                    .bindPopup(`<strong>${activoID}</strong><br><span style="color: #dc3545;">NUEVA UBICACIÓN</span><br>${new_coords_str}`).openPopup();
+                    .bindPopup(`<strong>${activoID}</strong><br><span style="color: ${popupColor};">${popupText}</span><br>${new_coords_str}`) // <-- Usa las variables
+                    .openPopup();
                 
                 const latlngs = [ [orig_lat, orig_lon], [new_lat, new_lon] ];
                 polyline = L.polyline(latlngs, {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
-
-                const distanceKm = getDistance(orig_lat, orig_lon, new_lat, new_lon);
-                distanceM = distanceKm * 1000;
-                distanceDisplay = distanceKm < 1 ? `${distanceM.toFixed(2)} m` : `${distanceKm.toFixed(2)} km`; 
 
                 bounds.push([new_lat, new_lon]);
                 map.fitBounds(bounds, { padding: [50, 50] });
@@ -747,12 +905,14 @@ function actualizarMapa(d, coordsStr) {
             }
         }
     } else {
+        // Si no hay coordsStr, solo limpia los marcadores nuevos
         limpiarMarcadoresYPolilinea(); 
         if (markerOriginal) {
             map.setView([orig_lat, orig_lon], 15);
         }
     }
 
+    // --- Llamada a actualizarInfoMapa (sección clave) ---
     actualizarInfoMapa(ubicacion, orig_coords_str, new_coords_str, distanceDisplay, distanceM);
     
     setTimeout(() => map.invalidateSize(), 100);

@@ -5,22 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Buscador de IDs - Interfaz Completa</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet"> 
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@700&family=Poppins:wght@400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-    --bg-dark: #1e1e1e;
-    --bg-card: #2c2c2c;
-    --text-light: #f5f5f5; /* Blanco casi puro */
-    --accent-blue: #007bff;
-    --accent-hover: #0056b3;
+    --bg-dark: #1e1e1e; /* Color de fondo de respaldo */
+    --bg-card: rgba(255, 255, 255, 0.05); /* <-- NUEVO: Estilo "Glassmorphism" */
+    --bg-popup: #2c2c2c; /* <-- ¡NUEVO! Color sólido original para popups */
+    --text-light: #e0e0e0; /* <-- NUEVO: Color de texto Williams */
+    --accent-blue: #00aaff; /* <-- NUEVO: Azul Neón Williams */
+    --accent-hover: #0072ff; /* <-- NUEVO: Azul Neón Williams (Hover) */
     --accent-red: #dc3545; 
-    --accent-red-intense: #D32F2F; /* Rojo más intenso */
+    --accent-red-intense: #D32F2F; 
     --accent-green: #28a745; 
-    --accent-yellow-vibrant: #F3C427; /* <<< MODIFICADO AL NUEVO TONO */
-    --border-color: #444;
-    --font-main: 'Helvetica Neue', Arial, sans-serif; 
-    --font-data: 'Roboto Mono', monospace;
+    --accent-yellow-vibrant: #F3C427; 
+    --border-color: rgba(255, 255, 255, 0.1); /* <-- NUEVO: Borde Glass */
+    --font-main: 'Poppins', sans-serif; /* <-- NUEVO: Fuente Williams */
+    --font-data: 'Roboto Mono', monospace; /* Mantenemos esta para datos */
     --highlight-row: #3a3a3a; 
 
     /* COLORES DE PROVEEDORES */
@@ -31,35 +34,44 @@
 /* General */
 body {
     font-family: var(--font-main);
-    background-color: var(--bg-dark);
+    /* <-- NUEVO: Fondo degradado de la pág. Williams */
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    background-attachment: fixed; /* Evita que el fondo se mueva con el scroll */
     color: var(--text-light);
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    overflow-y: hidden;
+    overflow-y: auto; /* <-- CORRECCIÓN: Permitir scroll si la ventana es muy pequeña */
     font-size: 1rem;
 }
 
 /* Header */
 .header {
-    background-color: #2c2c2c;
+    background-color: rgba(44, 44, 44, 0.5); /* <-- Ligeramente transparente */
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     text-align: center;
     padding: 15px 10px;
     border-bottom: 2px solid var(--accent-blue);
     font-family: var(--font-main);
 }
 .header h1 {
+    /* --- INICIO DE CAMBIOS DE TÍTULO --- */
+    font-family: 'IBM Plex Mono', monospace; /* <-- NUEVA FUENTE */
+    color: #ffffff; /* <-- NUEVO COLOR */
+    font-weight: 700; /* <-- NUEVO PESO */
+    text-shadow: 0 0 8px rgba(0, 170, 255, 0.7), 0 0 20px rgba(0, 170, 255, 0.5); /* <-- NUEVO RESPLANDOR */
+    /* --- FIN DE CAMBIOS DE TÍTULO --- */
     margin: 0;
     font-size: 2.2em;
-    color: var(--accent-blue);
 }
 
 /* Search */
 .search-container {
     padding: 20px 10px; 
-    background-color: #1e1e1e;
+    background-color: transparent;
     text-align: center;
 }
 .search-input-group {
@@ -68,16 +80,40 @@ body {
     align-items: center;
     gap: 10px;
 }
+/* --- INICIO: NUEVO ESTILO PARA LABEL DEL BUSCADOR --- */
+.search-label {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-blue); /* Azul neón Williams */
+    font-size: 1.1em;
+}
+/* --- FIN: NUEVO ESTILO --- */
+
 #idInput {
     padding: 12px 18px; 
     width: 380px;
     max-width: 50%; 
-    border: 1px solid var(--border-color);
-    background-color: #333;
-    color: var(--text-light);
     font-family: var(--font-data);
     font-size: 1.1em; 
+    
+    /* --- INICIO: ESTILOS DE INPUT (WILLIAMS) --- */
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    border: 1.5px solid #444;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    /* --- FIN: ESTILOS DE INPUT --- */
 }
+/* --- INICIO: ESTILO FOCUS (WILLIAMS) --- */
+#idInput:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 15px rgba(0, 170, 255, 0.5), 0 0 5px rgba(0, 170, 255, 0.8) inset;
+    outline: none;
+    background: rgba(0, 0, 0, 0.2);
+}
+/* --- FIN: ESTILO FOCUS --- */
+
 .search-container button {
     padding: 12px 18px; 
     color: var(--text-light);
@@ -86,7 +122,7 @@ body {
     font-family: var(--font-main);
     font-size: 1.05em; 
     transition: background-color 0.2s, outline 0.2s, transform 0.2s; 
-    border-radius: 4px; 
+    border-radius: 8px; /* <-- Bordes redondeados */
 }
 
 /* BOTÓN BUSCAR ID (AZUL) */
@@ -115,24 +151,31 @@ body {
 .content-wrapper {
     display: flex;
     justify-content: center;
-    align-items: stretch;
+    align-items: stretch; /* <-- HACE QUE LAS TARJETAS TENGAN LA MISMA ALTURA */
     gap: 25px;
     padding: 0 30px 30px;
-    flex-grow: 1;
+    flex-grow: 1; /* <-- HACE QUE EL CONTENEDOR LLENE EL ESPACIO VERTICAL */
 }
 
 /* Cards */
 .info-card, .map-card {
     width: 45%;
     max-width: 600px;
-    background-color: var(--bg-card);
+    /* --- INICIO: ESTILO DE TARJETA (WILLIAMS) --- */
+    background: var(--bg-card);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    /* --- FIN: ESTILO DE TARJETA --- */
     padding: 18px; 
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    border-radius: 16px; /* <-- Ajustado a 16px como Williams */
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 200px); 
+    /* --- CORRECCIÓN DE ALTURA --- */
+    /* height: calc(100vh - 200px); <-- ELIMINADO */
     min-height: 400px; 
+    /* Las tarjetas ahora se estirarán gracias al 'align-items: stretch' del .content-wrapper */
 }
 .info-card h2, .map-card h2 {
     color: var(--accent-blue);
@@ -147,10 +190,10 @@ body {
 
 /* --- ESTILO DE LA TABLA DE DATOS --- */
 .data-table {
-    background-color: #333;
+    background-color: rgba(0, 0, 0, 0.3); /* <-- Más oscuro y transparente */
     padding: 10px; 
     border-radius: 4px;
-    flex-grow: 1;
+    flex-grow: 1; /* <-- CORRECCIÓN: Hace que la tabla llene la tarjeta */
     overflow-y: auto; 
     max-height: 100%;
 }
@@ -182,7 +225,7 @@ body {
 .provider-tag {
     padding: 4px 8px;
     border-radius: 4px;
-    color: var(--text-light); /* Texto blanco */
+    color: #ffffff; /* Texto blanco */
     font-weight: bold;
 }
 .provider-telmex {
@@ -216,7 +259,7 @@ body {
     background-color: #000;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    flex-grow: 1;
+    flex-grow: 1; /* <-- CORRECCIÓN: Hace que el mapa llene la tarjeta */
     min-height: 150px;
 }
 
@@ -224,7 +267,7 @@ body {
 #mapaInfo {
     display: flex; 
     flex-direction: column;
-    background-color: #333;
+    background-color: rgba(0, 0, 0, 0.3); /* <-- Más oscuro y transparente */
     padding: 12px; 
     border-radius: 4px;
     font-size: 1em; 
@@ -250,6 +293,7 @@ body {
 }
 .coord-original { background-color: var(--accent-blue); }
 .coord-nueva { background-color: var(--accent-red); }
+.coord-coincide { background-color: var(--accent-green); } /* <-- ¡¡NUEVA CLASE!! */
 #coordenadas-line p,
 #coordenadas-nueva-line p {
     font-size: 1.2em; 
@@ -259,33 +303,48 @@ body {
 /* --- GRUPO DE INPUT Y BOTÓN DE COMPARACIÓN --- */
 .coord-input-group {
     display: flex;
-    margin-top: 10px; 
+    margin-top: 10px; /* <-- CAMBIO: Se restaura el margen superior */
     gap: 8px; 
 }
 #coordInput {
     padding: 10px 12px; 
     flex-grow: 1; 
-    border: 1px solid var(--border-color);
-    background-color: #444;
-    color: var(--text-light);
     font-family: var(--font-data);
     font-size: 1em; 
     box-sizing: border-box;
+
+    /* --- INICIO: ESTILOS DE INPUT (WILLIAMS) --- */
+    background: rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    border: 1.5px solid #444;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    /* --- FIN: ESTILOS DE INPUT --- */
 }
+/* --- INICIO: ESTILO FOCUS (WILLIAMS) --- */
+#coordInput:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 15px rgba(0, 170, 255, 0.5), 0 0 5px rgba(0, 170, 255, 0.8) inset;
+    outline: none;
+    background: rgba(0, 0, 0, 0.2);
+}
+/* --- FIN: ESTILO FOCUS --- */
+
+
 #compararBtn {
     padding: 10px 18px; 
-    background-color: #6c757d; /* <-- CAMBIO DE COLOR */
+    background-color: #6c757d; /* Color GRIS */
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px; /* <-- Bordes redondeados */
     font-weight: bold;
     font-size: 1em; 
     cursor: pointer;
     transition: background-color 0.2s, outline 0.2s, transform 0.2s; 
 }
 #compararBtn:hover {
-    background-color: #5a6268; /* <-- CAMBIO DE COLOR (HOVER) */
-    outline: 2px solid rgba(108, 117, 125, 0.7);  /* <-- CAMBIO DE OUTLINE (HOVER) */
+    background-color: #5a6268; /* Color GRIS (Hover) */
+    outline: 2px solid rgba(108, 117, 125, 0.7);  /* Outline GRIS (Hover) */
     outline-offset: 2px;
     transform: translateY(-1px);
 }
@@ -342,7 +401,7 @@ body {
     }
     to {
         /* Vuelve al color normal del input */
-        background-color: #444; 
+        background-color: rgba(0, 0, 0, 0.2); /* <-- Fondo de focus */
         color: var(--text-light);
         transform: scale(1.0);
         border-color: var(--border-color);
@@ -360,7 +419,7 @@ body {
 @media (max-width: 1000px) {
     body { overflow-y: auto; }
     .content-wrapper {
-        flex-direction: column;
+        flex-direction: column-reverse; /* <-- ¡ESTE ES EL CAMBIO! */
         align-items: center;
         gap: 20px;
         padding: 0 15px 30px;
@@ -391,15 +450,15 @@ body {
     .map-info-line { flex-direction: column; align-items: flex-start; }
 }
 
-/* --- ESTILO POP-UP OSCURO --- */
+/* --- ESTILO POP-UP OSCURO (RESTAURADO) --- */
 .leaflet-popup-content-wrapper {
-    background-color: var(--bg-card) !important;
+    background-color: var(--bg-popup) !important; /* <-- CORRECCIÓN: Fondo sólido original */
     color: var(--text-light) !important;
     box-shadow: 0 3px 14px rgba(0, 0, 0, 0.8);
     border-radius: 6px;
 }
 .leaflet-popup-tip {
-    background-color: var(--bg-card) !important;
+    background-color: var(--bg-popup) !important; /* <-- CORRECCIÓN: Fondo sólido original */
 }
 .leaflet-popup-content {
     font-size: 1em;
@@ -415,12 +474,15 @@ body {
 </head>
 
 <body>
-<header class="header">
+<header class="header" id="main-header">
     <h1>GEOLOCALIZADOR DE TOTEMS</h1> </header>
 
 <div class="search-container">
+    
+    <label for="idInput" class="search-label">ID del Tótem (o pega el texto aquí):</label>
+
     <div class="search-input-group">
-        <input type="text" id="idInput" placeholder="Pega el mensaje completo de whatsapp.." onkeyup="if(event.key === 'Enter') buscarID()">
+        <input type="text" id="idInput" placeholder="MC1234 o 1234 para buscar" onkeyup="if(event.key === 'Enter') buscarID()">
         <button onclick="buscarID()">BUSCAR ID</button>
         <button id="limpiarBtn" onclick="limpiarTodo()">LIMPIAR</button>
     </div>
@@ -554,9 +616,9 @@ function findAllCoordinateNumbers(text) {
 }
 
 
-// === FUNCIÓN BUSCAR ID (MODIFICADA CON LÓGICA ROBUSTA) ===
+// === FUNCIÓN BUSCAR ID (REESCRITA PARA SER MÁS ROBUSTA) ===
 function buscarID() {
-    // --- EXTRACCIÓN DE ID ---
+    // --- EXTRACCIÓN DE ID (Sin cambios) ---
     const idInput = document.getElementById('idInput');
     const rawIdText = idInput.value;
     let id = '';
@@ -573,39 +635,43 @@ function buscarID() {
     const info = document.getElementById('infoTotem');
     const coordInput = document.getElementById('coordInput');
     
-    // --- LÓGICA DE CACHÉ ---
+    // --- INICIO: LÓGICA DE EXTRACCIÓN DE COORDENADAS (NUEVA Y ROBUSTA) ---
+    
+    // 1. Limpiar el caché
     cachedNewCoordinates = null; 
     let firstCoordsStr = null;
     
-    const newCoordMarkers = /NUEVAS COORDENADAS|REUBICACIÓN|UBICACIÓN SUGERIDA/i;
-    const newMatch = rawIdText.match(newCoordMarkers);
-    
-    let textForFirstSearch = rawIdText;
-    let textForNewSearch = null;
+    // 2. Buscar TODOS los números de coordenadas en el texto pegado
+    const allNumbers = findAllCoordinateNumbers(rawIdText);
 
-    if (newMatch) {
-        textForFirstSearch = rawIdText.substring(0, newMatch.index);
-        textForNewSearch = rawIdText.substring(newMatch.index);
+    // 3. Asignar los números encontrados
+    if (allNumbers.length >= 4) {
+        // Se encontraron 2 o más pares.
+        // Par 1 (Índices 0 y 1) va al input.
+        firstCoordsStr = `${allNumbers[0]}, ${allNumbers[1]}`;
+        // Par 2 (Índices 2 y 3) va al caché.
+        cachedNewCoordinates = [allNumbers[2], allNumbers[3]];
         
-        const newNumbers = findAllCoordinateNumbers(textForNewSearch);
-        if (newNumbers.length >= 2) {
-            cachedNewCoordinates = [newNumbers[0], newNumbers[1]];
-        }
-    }
-
-    const firstNumbers = findAllCoordinateNumbers(textForFirstSearch);
-    if (firstNumbers.length >= 2) {
-        firstCoordsStr = `${firstNumbers[0]}, ${firstNumbers[1]}`; 
+    } else if (allNumbers.length >= 2) {
+        // Se encontró solo 1 par.
+        // Par 1 (Índices 0 y 1) va al input.
+        firstCoordsStr = `${allNumbers[0]}, ${allNumbers[1]}`;
+        // El caché se queda vacío (null).
     }
     
+    // 4. Poner las *primeras* coordenadas en el campo de input
     coordInput.value = firstCoordsStr || '';
-    // --- FIN LÓGICA DE CACHÉ ---
+    
+    // --- FIN: LÓGICA DE EXTRACCIÓN ---
 
     limpiarMapa(false); 
     currentActiveData = null; 
 
     if (!id) { info.innerHTML = `<p class="status-message">Ingrese un ID.</p>`; return; }
     
+    // --- ¡CAMBIO! OCULTAR HEADER AL BUSCAR ---
+    document.getElementById('main-header').style.display = 'none';
+
     let normalizedId = id;
     if (!id.startsWith('MC')) {
         normalizedId = 'MC' + id;
@@ -671,6 +737,9 @@ function compararCoordenadas() {
 
 // (Función original, sin cambios)
 function limpiarTodo() {
+    // --- ¡CAMBIO! MOSTRAR HEADER AL LIMPIAR ---
+    document.getElementById('main-header').style.display = 'block';
+
     document.getElementById('idInput').value = '';
     document.getElementById('coordInput').value = '';
     cachedNewCoordinates = null; // Limpiar caché
@@ -722,7 +791,7 @@ function limpiarMapa(clearInputs = false) {
     }
 }
 
-// (Función original, sin cambios)
+// === ¡¡¡FUNCIÓN ACTUALIZADA!!! ===
 function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM) {
     const ubicacionLine = document.getElementById('ubicacion-line');
     const coordenadasLine = document.getElementById('coordenadas-line');
@@ -736,7 +805,13 @@ function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, dista
     coordenadasLine.innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Original)</span>: ${orig_coords || '[NO ENCONTRADA]'}</p>`;
     
     if (new_coords) {
-        coordNuevaLine.innerHTML = `<p><span class="coord-nueva highlight-text">Coordenadas (Nuevas)</span>: ${new_coords}</p>`;
+        // --- ¡CAMBIO! Determinar la clase del span ---
+        let spanClass = 'coord-nueva'; // Default es rojo
+        if (distanceM <= 8) {
+            spanClass = 'coord-coincide'; // Si coincide, es verde
+        }
+        coordNuevaLine.innerHTML = `<p><span class="${spanClass} highlight-text">Coordenadas (Nuevas)</span>: ${new_coords}</p>`;
+        // --- FIN DEL CAMBIO ---
         coordNuevaLine.style.display = 'flex'; 
     } else {
         coordNuevaLine.style.display = 'none'; 
@@ -822,7 +897,7 @@ function actualizarMapa(d, coordsStr) {
     
     const ubicacion = `${d.COLONIA || 'N/A'}, ${d.ALCALDIA || 'N/A'}`;
     const orig_coords_str = `${orig_lat.toFixed(6)}, ${orig_lon.toFixed(6)}`;
-    let new_coords_str = null;
+    let new_coords_str_popup = null; // Este se usará para el popup (formateado)
     let distanceDisplay = "0 m";
     let distanceM = 0; 
 
@@ -889,11 +964,11 @@ function actualizarMapa(d, coordsStr) {
                     shadowSize: [41, 41]
                 });
                 
-                new_coords_str = `${new_lat.toFixed(6)}, ${new_lon.toFixed(6)}`;
+                new_coords_str_popup = `${new_lat.toFixed(6)}, ${new_lon.toFixed(6)}`; // Formateado para el popup
 
                 markerNew = L.marker([new_lat, new_lon], { icon: newIcon }) // <-- Usa el nuevo icono
                     .addTo(map)
-                    .bindPopup(`<strong>${activoID}</strong><br><span style="color: ${popupColor};">${popupText}</span><br>${new_coords_str}`) // <-- Usa las variables
+                    .bindPopup(`<strong>${activoID}</strong><br><span style="color: ${popupColor};">${popupText}</span><br>${new_coords_str_popup}`) // <-- Usa las variables
                     .openPopup();
                 
                 const latlngs = [ [orig_lat, orig_lon], [new_lat, new_lon] ];
@@ -913,7 +988,8 @@ function actualizarMapa(d, coordsStr) {
     }
 
     // --- Llamada a actualizarInfoMapa (sección clave) ---
-    actualizarInfoMapa(ubicacion, orig_coords_str, new_coords_str, distanceDisplay, distanceM);
+    // ¡¡¡CAMBIO!!! Pasa 'coordsStr' (el string raw) en lugar de 'new_coords_str_popup' (el string formateado)
+    actualizarInfoMapa(ubicacion, orig_coords_str, coordsStr, distanceDisplay, distanceM);
     
     setTimeout(() => map.invalidateSize(), 100);
 }

@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Buscador Tótems</title>
+<link rel="icon" type="image/png" href="icono/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="icono/favicon.svg" />
+<link rel="shortcut icon" href="icono/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="icono/apple-touch-icon.png" />
+<link rel="manifest" href="icono/site.webmanifest" />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@700&family=Poppins:wght@400;600&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+/* --- VARIABLES & BASE --- */
+:root {
+    --bg-dark: #1e1e1e;
+    --bg-card: rgba(255, 255, 255, 0.05);
+    --bg-popup: #2c2c2c;
+    --text-light: #e0e0e0;
+    --accent-blue: #00aaff;
+    --accent-hover: #0072ff;
+    --accent-red: #dc3545; 
+    --accent-red-intense: #D32F2F; 
+    --accent-green: #28a745; 
+    --accent-yellow-vibrant: #F3C427; 
+    --border-color: rgba(255, 255, 255, 0.1);
+    --font-main: 'Poppins', sans-serif;
+    --font-data: 'Roboto Mono', monospace;
+    --highlight-row: #3a3a3a; 
+    --color-telmex: #007bff;
+    --color-omnia: #ff8c00;
+}
+
+html {
+    overscroll-behavior-y: none;
+}
+
+body {
+    font-family: var(--font-main);
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    background-attachment: fixed;
+    color: var(--text-light);
+    margin: 0; padding: 0;
+    display: flex; flex-direction: column;
+    min-height: 100vh; overflow-y: auto;
+    font-size: 1rem;
+    overscroll-behavior-y: none;
+}
+
+/* --- PRELOADER --- */
+#initLoader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    z-index: 20000; display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.5s ease, visibility 0.5s;
+}
+.loader-spinner {
+    width: 50px; height: 50px;
+    border: 5px solid rgba(255,255,255,0.1);
+    border-top: 5px solid var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* --- LOGIN OVERLAY --- */
+.login-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    z-index: 9999; display: flex; justify-content: center; align-items: center;
+    transition: opacity 0.5s ease, visibility 0.5s;
+    padding: 10px; 
+    box-sizing: border-box;
+}
+.login-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* TARJETA DE LOGIN */
+.login-card {
+    background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    padding: 40px; border-radius: 20px; text-align: center;
+    
+    width: 380px;
+    max-width: 95%; 
+    box-sizing: border-box; 
+    
+    display: flex; flex-direction: column; gap: 15px;
+}
+.login-card h2 { color: #fff; font-family: 'IBM Plex Mono', monospace; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0, 170, 255, 0.7); }
+.login-input { padding: 12px; background: rgba(0, 0, 0, 0.3); color: #fff; border: 1.5px solid #444; border-radius: 8px; outline: none; font-family: var(--font-main); }
+.login-input:focus { border-color: var(--accent-blue); box-shadow: 0 0 10px rgba(0, 170, 255, 0.3); }
+.login-btn { padding: 12px; background-color: var(--accent-blue); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: 'IBM Plex Mono', monospace; }
+.error-msg { color: var(--accent-red-intense); font-size: 0.9em; display: none; font-weight: bold; }
+
+.remember-container { text-align: left; display: flex; align-items: center; font-size: 0.9em; color: #ccc; margin-top: -5px; }
+.remember-container input { margin-right: 8px; accent-color: var(--accent-blue); cursor: pointer; }
+.remember-container label { cursor: pointer; }
+
+/* --- BARRA DE USUARIO --- */
+#userBar {
+    border-bottom: 2px solid var(--accent-blue); 
+    padding: 5px 20px;
+    justify-content: flex-end; align-items: center;
+    gap: 15px; font-size: 0.85rem;
+}
+
+#userDisplay { 
+    color: white; 
+    font-weight: 600; 
+    font-family: var(--font-data); 
+    text-transform: uppercase; 
+    font-size: 0.8em; 
+    -webkit-text-stroke: 0;
+    text-stroke: 0; 
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8),
+                 0 0 12px rgba(255, 255, 255, 0.6);
+}
+
+#btnLogout {
+    background: transparent; border: 1px solid var(--accent-red); color: var(--accent-red);
+    padding: 2px 8px; border-radius: 4px; cursor: pointer;
+    font-size: 0.8em; font-family: var(--font-main); font-weight: bold;
+    transition: all 0.2s; white-space: nowrap;
+}
+#btnLogout:hover { background: var(--accent-red); color: white; }
+
+/* --- UI GENERAL --- */
+.search-container { padding: 20px 10px; text-align: center; }
+.search-input-group { display: flex; justify-content: center; align-items: center; gap: 10px; }
+.search-label { display: block; margin-bottom: 0.75rem; font-weight: 600; color: var(--accent-blue); font-size: 1.1em; }
+#idInput { 
+    padding: 12px 18px; width: 380px; max-width: 50%; 
+    font-family: var(--font-data); font-size: 1.1em; 
+    background: rgba(0, 0, 0, 0.3); color: #ffffff; 
+    border: 1.5px solid #444; border-radius: 8px; 
+    transition: all 0.3s ease; 
+}
+#idInput:focus { border-color: var(--accent-blue); box-shadow: 0 0 15px rgba(0, 170, 255, 0.5), 0 0 5px rgba(0, 170, 255, 0.8) inset; outline: none; background: rgba(0, 0, 0, 0.2); }
+.search-container button { padding: 12px 18px; color: var(--text-light); border: none; cursor: pointer; font-family: var(--font-main); font-size: 1.05em; border-radius: 8px; transition: all 0.2s; }
+.search-container button:not(#limpiarBtn) { background-color: var(--accent-blue); }
+.search-container button:not(#limpiarBtn):hover { background-color: var(--accent-hover); transform: translateY(-1px); outline: 2px solid rgba(0, 123, 255, 0.7); outline-offset: 2px; }
+#limpiarBtn { background-color: #6c757d; }
+#limpiarBtn:hover { background-color: #5a6268; transform: translateY(-1px); outline: 2px solid rgba(108, 117, 125, 0.7); outline-offset: 2px; }
+
+.content-wrapper { justify-content: center; align-items: stretch; gap: 25px; padding: 0 30px 30px; flex-grow: 1; }
+.info-card, .map-card {
+    width: 45%; max-width: 600px;
+    background: var(--bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    padding: 18px; border-radius: 16px; display: flex; flex-direction: column; min-height: 400px;
+    box-sizing: border-box; 
+}
+.info-card h2, .map-card h2 { 
+    color: var(--accent-blue); 
+    border-bottom: 1px solid var(--border-color); 
+    padding-bottom: 10px; 
+    margin-bottom: 12px; 
+    font-size: 1.6em; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    
+    /* Permite que el botón baje si no cabe */
+    flex-wrap: wrap; 
+    gap: 10px;
+}
+
+.data-table { background-color: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 4px; flex-grow: 1; overflow-y: auto; max-height: 100%; }
+.data-table .status-message { text-align: center; font-size: 1.1em; padding: 10px; margin: 0; }
+.data-table .status-success { color: var(--accent-green); }
+.data-table .status-loading { color: var(--accent-blue); }
+
+.data-row { display: flex; border-bottom: 1px solid #3c3c3c; padding: 10px 5px; font-family: var(--font-data); font-size: 1em; transition: background-color: 0.15s; }
+.data-row:last-child { border-bottom: none; }
+.data-row:hover { background-color: var(--highlight-row); }
+
+.data-label { width: 45%; font-weight: bold; color: var(--accent-blue); }
+.data-value { width: 55%; color: var(--text-light); word-break: break-word; }
+.provider-tag { padding: 4px 8px; border-radius: 4px; color: #fff; font-weight: bold; }
+.provider-telmex { background-color: var(--color-telmex); } .provider-omnia { background-color: var(--color-omnia); }
+
+#mapa { background-color: #000; border: 1px solid var(--border-color); border-radius: 4px; flex-grow: 1; min-height: 150px; }
+
+#mapaInfo { display: flex; flex-direction: column; background-color: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 4px; font-family: var(--font-main); margin-bottom: 12px; }
+#mapaInfo:not(.visible) { display: none; }
+
+.map-info-line { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
+.map-info-line p { margin: 4px 0; font-size: 1.1em; }
+
+.coord-input-group { display: flex; margin-top: 10px; gap: 8px; }
+#coordInput { padding: 10px 12px; flex-grow: 1; font-family: var(--font-data); font-size: 1em; background: rgba(0, 0, 0, 0.3); color: #fff; border: 1.5px solid #444; border-radius: 8px; transition: all 0.3s ease; }
+#coordInput:focus { border-color: var(--accent-blue); box-shadow: 0 0 15px rgba(0, 170, 255, 0.5), 0 0 5px rgba(0, 170, 255, 0.8) inset; outline: none; background: rgba(0, 0, 0, 0.2); }
+#compararBtn { padding: 10px 18px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 1em; }
+#compararBtn:hover { background-color: #5a6268; outline: 2px solid rgba(108, 117, 125, 0.7); outline-offset: 2px; transform: translateY(-1px); }
+
+/* --- BOTÓN DE REUBICACIÓN (HORIZONTAL) --- */
+#reubicacion-btn-header { 
+    display: none; 
+    flex-direction: row; /* Lado a lado */
+    align-items: center;
+    justify-content: center;
+    gap: 6px; /* Espacio */
+
+    padding: 5px 12px; 
+    width: fit-content; 
+    
+    background-color: var(--accent-red); 
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    font-size: 0.7em; 
+    
+    cursor: default; 
+    align-self: flex-end; 
+    margin-bottom: -5px; 
+    text-align: center; 
+    line-height: 1.4; 
+    
+    white-space: nowrap; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+#alertaDistancia { display: none; color: var(--accent-red-intense); background-color: var(--accent-yellow-vibrant); font-weight: bold; text-align: center; font-size: 1em; padding: 8px; border-radius: 4px; margin: -5px 0 10px 0; }
+
+.highlight-text { font-weight: bold; color: white !important; padding: 3px 6px; border-radius: 4px; line-height: 1.5; }
+.coord-original { background-color: var(--accent-blue); } .coord-nueva { background-color: var(--accent-red); } .coord-coincide { background-color: var(--accent-green); }
+
+/* --- POPUP AJUSTADO AL TEXTO --- */
+.leaflet-popup-content-wrapper { 
+    background-color: var(--bg-popup) !important; 
+    color: var(--text-light) !important; 
+    box-shadow: 0 3px 14px rgba(0,0,0,0.8); 
+    border-radius: 6px;
+    width: fit-content !important; 
+    min-width: unset !important;
+}
+.leaflet-popup-tip { background-color: var(--bg-popup) !important; }
+.leaflet-popup-content { 
+    font-size: 0.95em; font-family: var(--font-main); 
+    width: max-content !important; max-width: 250px !important;
+    white-space: normal; margin: 12px 28px 12px 12px !important; line-height: 1.4;
+}
+.leaflet-popup-content strong { color: var(--text-light); font-weight: bold; }
+
+@keyframes flash-highlight { from { background: var(--accent-yellow-vibrant); color: #1e1e1e; transform: scale(1.02); border-color: var(--accent-yellow-vibrant); } to { background: rgba(0,0,0,0.2); color: var(--text-light); transform: scale(1); border-color: var(--border-color); } }
+.flash-on-paste { animation: flash-highlight 0.6s ease-out 1; }
+@keyframes pulse-yellow { 0% { transform: scale(1); box-shadow: 0 0 4px rgba(243, 196, 39, 0.4); } 50% { transform: scale(1.04); box-shadow: 0 0 16px rgba(243, 196, 39, 0.9); } 100% { transform: scale(1); box-shadow: 0 0 4px rgba(243, 196, 39, 0.4); } }
+#compararBtn.btn-has-cache { background-color: #8A2BE2; color: #ffffff; font-size: 0.9em; line-height: 1.3; font-weight: 700; border: 1.5px solid rgba(255, 255, 255, 0.8); animation: pulse-yellow 1.8s infinite ease-in-out; }
+#compararBtn.btn-has-cache:hover { background-color: #9370DB; color: #ffffff; transform: translateY(-1px) scale(1.04); outline: none; }
+
+@keyframes fall-away-clean { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(30px) scale(0.98); } }
+.anim-fall-away-clean { animation: fall-away-clean 0.4s ease-in 1; }
+@keyframes fade-in-data { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.anim-fade-in-data { animation: fade-in-data 0.4s ease-out 1; }
+
+.custom-alert-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; transition: opacity 0.3s; pointer-events: none; padding: 15px; box-sizing: border-box; }
+.custom-alert-overlay.visible { opacity: 1; pointer-events: auto; }
+.custom-alert-box { background: linear-gradient(145deg, #1f1f2e, #2b2b4d); border: 1px solid var(--accent-blue); border-radius: 16px; box-shadow: 0 0 30px rgba(0, 170, 255, 0.4), 0 10px 50px rgba(0, 0, 0, 0.5); padding: 25px 30px; width: 100%; max-width: 450px; text-align: center; transform: scale(0.7); transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.3s ease; }
+.custom-alert-overlay.visible .custom-alert-box { transform: scale(1); opacity: 1; }
+.custom-alert-icon { font-size: 3.5em; animation: pulse-icon 1.5s infinite; display: inline-block; }
+.custom-alert-box h2 { color: var(--accent-yellow-vibrant); font-family: 'IBM Plex Mono', monospace; font-size: 1.8em; margin-top: 10px; margin-bottom: 15px; text-shadow: 0 0 10px rgba(243,196,39,0.7); }
+.custom-alert-box p { font-size: 1.1em; color: var(--text-light); line-height: 1.6; margin-bottom: 25px; word-wrap: break-word; }
+.custom-alert-box button { background-color: var(--accent-blue); color: white; border: none; border-radius: 8px; padding: 12px 30px; font-family: var(--font-main); font-weight: 600; font-size: 1em; cursor: pointer; transition: all 0.2s ease; }
+.custom-alert-box button:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3); }
+@keyframes pulse-icon { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
+
+/* RESPONSIVE */
+@media (max-width: 1000px) {
+    body { overflow-y: auto; }
+    .content-wrapper { flex-direction: column-reverse; align-items: center; padding: 0 15px 30px; gap: 20px; }
+    .info-card, .map-card { width: 100%; height: auto; min-height: auto; }
+    .data-table { max-height: 350px; }
+    #mapa { min-height: 350px; }
+
+    /* --- CAMBIO: TÍTULO MÁS GRANDE PERO RESPONSIVO --- */
+    .info-card h2, .map-card h2 { 
+        font-size: 1.35em !important; /* Aumentado para mejor visibilidad */
+        align-items: center;
+    }
+
+    .search-input-group { flex-wrap: wrap; }
+    #idInput { width: 100%; max-width: 100%; box-sizing: border-box; }
+    .search-container button { margin: 8px 5px 0; flex-grow: 1; max-width: 45%; }
+    .coord-input-group { flex-direction: column; }
+    #coordInput, #compararBtn { width: 100%; box-sizing: border-box; }
+    
+    .data-row { font-size: 0.85em; }
+    .map-info-line { flex-direction: column; align-items: flex-start; }
+    #userBar { justify-content: center; padding: 8px; }
+
+    /* Botón ajustado para móvil */
+    #reubicacion-btn-header {
+        font-size: 0.8em !important;
+        padding: 5px 10px !important;
+        max-width: 100%;
+    }
+}
+
+</style>
+</head>
+<body>
+
+<div id="initLoader"><div class="loader-spinner"></div></div>
+
+<div id="loginOverlay" class="login-overlay hidden">
+    <form id="loginForm" class="login-card">
+        <h2>💻VALIDACIÓN💻</h2>
+        <input type="text" id="txtUsuario" name="username" autocomplete="username" class="login-input" placeholder="Nombre de Usuario" style="text-transform: lowercase;">
+        <input type="password" id="txtPassword" name="password" autocomplete="current-password" class="login-input" placeholder="Contraseña">
+        
+        <div class="remember-container">
+            <label>
+                <input type="checkbox" id="chkPersist"> Mantener sesión activa
+            </label>
+        </div>
+
+        <p id="msgError" class="error-msg">Error</p>
+        <button type="submit" id="btnLogin" class="login-btn">INICIAR SESIÓN</button>
+    </form>
+</div>
+
+<div id="userBar" style="display: none;">
+    <span id="userDisplay">CARGANDO...</span>
+    <button id="btnLogout">CERRAR SESIÓN</button>
+</div>
+
+<div class="search-container" style="display: none;">
+    <label for="idInput" class="search-label">ID del Tótem (o pega el mensaje completo de whatsapp)</label>
+    <div class="search-input-group">
+        <input type="text" id="idInput" placeholder="Pegar aqui..." onkeyup="if(event.key === 'Enter') window.buscarID()">
+        <button onclick="window.buscarID()">BUSCAR ID</button>
+        <button id="limpiarBtn" onclick="window.limpiarTodo()">LIMPIAR</button>
+    </div>
+</div>
+
+<main class="content-wrapper" style="display: none;">
+    <section class="info-card">
+        <h2>DATOS DEL TÓTEM</h2> 
+        <div id="infoTotem" class="data-table">
+            <p class="status-message status-loading">Cargando base de datos...</p>
+        </div>
+    </section>
+
+    <section class="map-card">
+        <h2>
+            UBICACIÓN GEOGRÁFICA
+            <span id="reubicacion-btn-header" style="display:none;"></span>
+        </h2>
+        <p id="alertaDistancia"></p>
+        <div id="mapaInfo" class="map-footer">
+            <div id="ubicacion-line" class="map-info-line"><p>Ubicación: [PENDIENTE]</p></div>
+            <div id="coordenadas-line" class="map-info-line"><p><span class="coord-original highlight-text">Coordenadas (Original)</span>: [PENDIENTE]</p></div>
+            <div id="coordenadas-nueva-line" class="map-info-line" style="display:none;"><p><span class="coord-nueva highlight-text">Coordenadas (Nuevas)</span>: [PENDIENTE]</p></div>
+            <div class="coord-input-group">
+                <input type="text" id="coordInput" placeholder="Coordenadas de Reubicación (Lat,Lon)">
+                <button id="compararBtn" onclick="window.compararCoordenadas()">COMPARAR</button>
+            </div>
+        </div>
+        <div id="mapa"></div>
+    </section>
+</main>
+
+<footer class="footer"></footer>
+
+<div id="customAlert" class="custom-alert-overlay" style="display: none;">
+    <div class="custom-alert-box">
+        <span class="custom-alert-icon">⚠️</span>
+        <h2>¡Atención!</h2>
+        <p id="customAlertMessage">Mensaje.</p>
+        <button id="customAlertClose" onclick="window.closeCustomAlert()">ENTENDIDO</button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD0AvvA4uR7c-bbvWLJDtk18hW0ASA2TQc",
+      authDomain: "usuarios-buscador.firebaseapp.com",
+      projectId: "usuarios-buscador",
+      storageBucket: "usuarios-buscador.firebasestorage.app",
+      messagingSenderId: "317259068184",
+      appId: "1:317259068184:web:5387915faade48aaac646d"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const DOMINIO_INTERNO = "@totems.com"; 
+
+    const NOMBRES_COMPLETOS = {
+        'admin': 'Administrador',
+        'omar.castillo': 'omar castillo ayala',
+        'earenas': 'ulises arenas hernandez',
+        'luis.edgar7': 'luis edgar bazaldua'
+        // Agrega aquí todos tus usuarios
+    };
+
+    // DOM Elements
+    const loginOverlay = document.getElementById('loginOverlay'); 
+    const loginForm = document.getElementById('loginForm'); 
+    const btnLogin = document.getElementById('btnLogin');
+    const btnLogout = document.getElementById('btnLogout');
+    const txtUsuario = document.getElementById('txtUsuario');
+    const txtPassword = document.getElementById('txtPassword');
+    const msgError = document.getElementById('msgError');
+    const chkPersist = document.getElementById('chkPersist');
+    const userBar = document.getElementById('userBar');
+    const userDisplay = document.getElementById('userDisplay');
+
+    // --- LÓGICA DE INACTIVIDAD (15 MINUTOS) ---
+    let inactivityTimeout;
+    const TIMEOUT_DURATION = 60 * 60 * 1000; 
+
+    function resetInactivityTimer() {
+        if(auth.currentUser) {
+            clearTimeout(inactivityTimeout);
+            inactivityTimeout = setTimeout(() => {
+                signOut(auth).then(() => {
+                    alert("Tu sesión ha expirado por inactividad (1 hora).");
+                });
+            }, TIMEOUT_DURATION);
+        }
+    }
+
+    function setupActivityListeners() {
+        ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.addEventListener(e, resetInactivityTimer));
+        resetInactivityTimer(); 
+    }
+
+    function removeActivityListeners() {
+        ['mousemove', 'keydown', 'click', 'scroll'].forEach(e => window.removeEventListener(e, resetInactivityTimer));
+        clearTimeout(inactivityTimeout);
+    }
+
+    // --- ESTADO DE AUTENTICACIÓN (CON GESTIÓN DE PRELOADER) ---
+    onAuthStateChanged(auth, (user) => {
+        const initLoader = document.getElementById('initLoader');
+        
+        const searchContainer = document.querySelector('.search-container');
+        const contentWrapper = document.querySelector('.content-wrapper');
+        
+        if (user) {
+            // --- ESTADO LOGUEADO ---
+            const nombreUsuario = user.email.replace(DOMINIO_INTERNO, '');
+            const nombreAMostrar = NOMBRES_COMPLETOS[nombreUsuario] || nombreUsuario;
+            console.log("Sesión:", nombreUsuario);
+            
+            loginOverlay.classList.add('hidden'); 
+            userBar.style.display = 'flex';
+            searchContainer.style.display = 'block'; 
+            contentWrapper.style.display = 'flex';   
+            
+            userDisplay.innerText = nombreAMostrar;
+            
+            setupActivityListeners();
+
+            setTimeout(() => {
+                if (map) { 
+                    map.invalidateSize();
+                }
+            }, 150);
+            
+        } else {
+            // --- ESTADO DESLOGUEADO ---
+            loginOverlay.classList.remove('hidden');
+            userBar.style.display = 'none';
+            searchContainer.style.display = 'none'; 
+            contentWrapper.style.display = 'none';  
+            
+            txtPassword.value = '';
+            btnLogin.innerText = "INICIAR SESIÓN"; 
+            removeActivityListeners();
+        }
+
+        // Ocultar el Loader Inicial suavemente
+        if (initLoader) {
+            initLoader.style.opacity = '0';
+            setTimeout(() => {
+                 if(initLoader) initLoader.style.visibility = 'hidden';
+            }, 500);
+        }
+    });
+
+    // --- LOGIN CON PERSISTENCIA (EVENTO SUBMIT) ---
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault(); 
+
+        const usuario = txtUsuario.value.trim().toLowerCase(); 
+        const password = txtPassword.value;
+        const emailCompleto = usuario + DOMINIO_INTERNO;
+
+        msgError.style.display = 'none';
+        const originalText = btnLogin.innerText;
+        btnLogin.innerText = "Verificando...";
+
+        try {
+            const persistenceMode = chkPersist.checked ? browserLocalPersistence : browserSessionPersistence;
+            await setPersistence(auth, persistenceMode);
+            await signInWithEmailAndPassword(auth, emailCompleto, password);
+        } catch (error) {
+            console.error(error);
+            msgError.innerText = traducirError(error.code);
+            msgError.style.display = 'block';
+            btnLogin.innerText = originalText;
+        }
+    });
+
+    btnLogout.addEventListener('click', async () => {
+        try { await signOut(auth); } catch (error) { console.error(error); }
+    });
+
+    function traducirError(code) {
+        switch (code) {
+            case 'auth/invalid-credential': return 'Usuario o contraseña incorrectos.';
+            case 'auth/too-many-requests': return 'Demasiados intentos. Espera un poco.';
+            default: 'Error de acceso.';
+        }
+    }
+
+    // --- MAPA Y DATOS ---
+    let totemData = [], map = null, markerOriginal = null, markerNew = null, polyline = null;
+    let currentActiveData = null; 
+    let cachedNewCoordinates = null; 
+    const DATA_URL = "https://cdn.jsdelivr.net/gh/lazerboy404/buscador-totems@main/csvjson.json";
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        map = L.map('mapa').setView([19.4326, -99.1332], 12); 
+       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        await cargarDatos();
+    });
+
+    async function cargarDatos() {
+        const info = document.getElementById('infoTotem');
+        info.innerHTML = `<p class="status-message status-loading">Cargando base de datos...</p>`;
+        try {
+            const r = await fetch(DATA_URL);
+            if (!r.ok) throw new Error();
+            totemData = await r.json();
+            info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
+        } catch {
+            info.innerHTML = `<p class="status-message" style="color:red;">Error al cargar datos.</p>`;
+        }
+    }
+
+    // Funciones Window
+    window.buscarID = function() {
+        const idInput = document.getElementById('idInput');
+        const rawIdText = idInput.value;
+        let id = '';
+        const idMatch = rawIdText.match(/MC\d+/i);
+        if (idMatch) { id = idMatch[0].toUpperCase(); } else { id = rawIdText.trim().toUpperCase(); }
+        idInput.value = id; 
+        
+        cachedNewCoordinates = null; 
+        const coordInput = document.getElementById('coordInput');
+        const allNumbers = findAllCoordinateNumbers(rawIdText);
+        if (allNumbers.length >= 4) { coordInput.value = `${allNumbers[0]}, ${allNumbers[1]}`; cachedNewCoordinates = [allNumbers[2], allNumbers[3]]; }
+        else if (allNumbers.length >= 2) { coordInput.value = `${allNumbers[0]}, ${allNumbers[1]}`; }
+        
+        const compararBtn = document.getElementById('compararBtn');
+        if (cachedNewCoordinates) { compararBtn.classList.add('btn-has-cache'); compararBtn.textContent = 'PROPUESTA ENCONTRADA'; }
+        else { compararBtn.classList.remove('btn-has-cache'); compararBtn.textContent = 'COMPARAR'; }
+
+        limpiarMapa(false); 
+        currentActiveData = null; 
+
+        const info = document.getElementById('infoTotem');
+        if (!id) { info.innerHTML = `<p class="status-message">Ingrese un ID.</p>`; return; }
+        
+        let normalizedId = id.startsWith('MC') ? id : 'MC' + id;
+        const data = totemData.find(d => d.ID === normalizedId || d.id === normalizedId);
+        
+        if (!data) {
+            info.innerHTML = `<p class="status-message" style="color:red;">ID ${id} no encontrado.</p>`;
+            document.getElementById('mapaInfo').classList.remove('visible');
+            actualizarInfoMapa(null, null, null, null, 0); return;
+        }
+        
+        const estatusKey = Object.keys(data).find(k => k.toUpperCase() === 'ESTATUS');
+        if (estatusKey && data[estatusKey] && data[estatusKey].toUpperCase() === 'GABINETE INSTALADO') {
+            const fechaKey = Object.keys(data).find(k => k.toUpperCase().replace(/_/g, ' ') === 'FECHA DE INSTALACION');
+            const fecha = fechaKey ? data[fechaKey] : 'N/A';
+            window.showCustomAlert(`Este tótem (ID: <strong>${id}</strong>) ya fue instalado.<br><br><strong>Fecha de Instalación:</strong> ${fecha}`);
+        }
+
+        currentActiveData = data; 
+        document.getElementById('mapaInfo').classList.add('visible'); 
+        mostrarInformacion(data, info); 
+        
+        [info, document.getElementById('mapaInfo')].forEach(box => { 
+            if (box) { box.classList.remove('anim-fade-in-data'); void box.offsetWidth; box.classList.add('anim-fade-in-data'); }
+        });
+        
+        actualizarMapa(data, coordInput.value.trim() || null); 
+    };
+
+    window.compararCoordenadas = function() {
+        if (!currentActiveData) { window.showCustomAlert('Error: Busque un ID primero.'); return; }
+        const coordInput = document.getElementById('coordInput');
+        let coordsStrToCompare = null;
+
+        if (cachedNewCoordinates && cachedNewCoordinates.length === 2) {
+            coordsStrToCompare = `${cachedNewCoordinates[0]}, ${cachedNewCoordinates[1]}`;
+            coordInput.value = coordsStrToCompare; cachedNewCoordinates = null; 
+            const btn = document.getElementById('compararBtn');
+            btn.classList.remove('btn-has-cache'); btn.textContent = 'COMPARAR';
+            coordInput.classList.remove('flash-on-paste'); void coordInput.offsetWidth; coordInput.classList.add('flash-on-paste');
+        } else {
+            const nums = findAllCoordinateNumbers(coordInput.value);
+            if (nums.length >= 2) { coordsStrToCompare = `${nums[0]}, ${nums[1]}`; coordInput.value = coordsStrToCompare; }
+            else coordInput.value = '';
+        }
+        limpiarMarcadoresYPolilinea(); 
+        actualizarMapa(currentActiveData, coordsStrToCompare);
+    };
+
+    window.limpiarTodo = function() {
+        document.getElementById('idInput').value = '';
+        document.getElementById('coordInput').value = '';
+        cachedNewCoordinates = null;
+        document.getElementById('compararBtn').classList.remove('btn-has-cache');
+        document.getElementById('compararBtn').textContent = 'COMPARAR'; 
+
+        const els = [document.querySelector('.info-card'), document.querySelector('.map-card'), document.getElementById('mapaInfo')];
+        els.forEach(el => { 
+            if(el && el.style.display!=='none') { 
+                el.classList.remove('anim-fall-away-clean'); void el.offsetWidth; el.classList.add('anim-fall-away-clean'); 
+            } 
+        });
+        
+        setTimeout(() => {
+            limpiarMapa(true); 
+
+            if (map) {
+                map.setView([19.4326, -99.1332], 12);
+                map.invalidateSize();
+            }
+            
+            document.getElementById('infoTotem').innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
+            document.getElementById('mapaInfo').classList.remove('visible'); 
+            els.forEach(el => { if(el) el.classList.remove('anim-fall-away-clean'); });
+        }, 400);
+    };
+
+    window.showCustomAlert = (msg) => { const b=document.getElementById('customAlert'); document.getElementById('customAlertMessage').innerHTML=msg; b.style.display='flex'; setTimeout(()=>b.classList.add('visible'),10); };
+    window.closeCustomAlert = () => { const b=document.getElementById('customAlert'); b.classList.remove('visible'); setTimeout(()=>b.style.display='none',300); };
+
+    // Helpers
+    function findAllCoordinateNumbers(text) {
+        if (!text) return [];
+        const floatRegex = /-?\d+\.\d+/g; const intRegex = /-?\d{7,11}/g; 
+        const allMatches = text.match(new RegExp(floatRegex.source + '|' + intRegex.source, 'g')) || [];
+        return allMatches.map(num => {
+            if (num.includes('.')) return num;
+            if (num.startsWith('-') && (num.startsWith('-9') || num.startsWith('-1'))) { if (num.length >= 8) return num.substring(0, 3) + '.' + num.substring(3); }
+            if (!num.startsWith('-') && (num.startsWith('1') || num.startsWith('2'))) { if (num.length >= 7) return num.substring(0, 2) + '.' + num.substring(2); }
+            return null;
+        }).filter(Boolean);
+    }
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; const dLat = (lat2 - lat1) * (Math.PI/180); const dLon = (lon2 - lon1) * (Math.PI/180);
+        const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+    function limpiarMarcadoresYPolilinea() {
+        if (markerNew) map.removeLayer(markerNew); if (polyline) map.removeLayer(polyline);
+        markerNew = null; polyline = null;
+        document.getElementById('reubicacion-btn-header').style.display = 'none'; 
+        document.getElementById('alertaDistancia').style.display = 'none'; 
+        if (currentActiveData) {
+            const u = `${currentActiveData.COLONIA||'N/A'}, ${currentActiveData.ALCALDIA||'N/A'}`;
+            const c = `${parseFloat(currentActiveData.LATITUD||currentActiveData.latitud).toFixed(6)}, ${parseFloat(currentActiveData.LONGITUD||currentActiveData.longitud).toFixed(6)}`;
+            actualizarInfoMapa(u, c, null, "0 m", 0); 
+        }
+        if (markerOriginal) markerOriginal.openPopup();
+    }
+    function limpiarMapa(clearInputs) {
+        if (markerOriginal) map.removeLayer(markerOriginal); if (markerNew) map.removeLayer(markerNew); if (polyline) map.removeLayer(polyline);
+        markerOriginal = null; markerNew = null; polyline = null; currentActiveData = null;
+        document.getElementById('reubicacion-btn-header').style.display = 'none'; document.getElementById('alertaDistancia').style.display = 'none'; 
+        actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null, 0); 
+    }
+    function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM) {
+        document.getElementById('ubicacion-line').innerHTML = `<p>Ubicación: <strong>${ubicacion||'[NO ENCONTRADA]'}</strong></p>`;
+        document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Original)</span>: ${orig_coords||'[NO ENCONTRADA]'}</p>`;
+        const cnLine = document.getElementById('coordenadas-nueva-line');
+        const btnHeader = document.getElementById('reubicacion-btn-header');
+        const alerta = document.getElementById('alertaDistancia');
+        alerta.style.display='none';
+
+        if (new_coords) {
+            cnLine.innerHTML = `<p><span class="${distanceM<=8?'coord-coincide':'coord-nueva'} highlight-text">Coordenadas (Nuevas)</span>: ${new_coords}</p>`;
+            cnLine.style.display = 'flex'; 
+            
+            // --- ESTRUCTURA INTERNA PARA FLEXBOX ---
+            // JS inserta dos spans, CSS flex-direction: column los apila
+            const textoEstado = distanceM<=8 ? 'COINCIDE' : 'REUBICACIÓN';
+            btnHeader.innerHTML = `<span>${textoEstado}</span><span>${distancia}</span>`;
+            
+            // Asegurar display flex
+            btnHeader.style.display = 'inline-flex'; 
+            
+            btnHeader.style.backgroundColor = distanceM<=8 ? 'var(--accent-green)' : 'var(--accent-red)';
+            
+            if (distanceM > 100 && distanceM > 8) { 
+                alerta.textContent = '☠️ ¡Atención! La distancia excede los 100 metros permitidos. ☠️'; 
+                alerta.style.display = 'block'; 
+            }
+        } else { cnLine.style.display = 'none'; btnHeader.style.display = 'none'; }
+    }
+    function mostrarInformacion(data, cont) {
+        let html = ''; const excl = ['LATITUD','LONGITUD','latitud','longitud','Latitude','Longitude'];
+        for (const k in data) {
+            if (excl.includes(k)) continue; 
+            let val = String(data[k]);
+            if ((k.toUpperCase().includes('PROVEEDOR') || k.toUpperCase() === 'TIPO')) {
+                if(val.toUpperCase().trim()==='TELMEX') val=`<span class="provider-tag provider-telmex">${val}</span>`;
+                else if(val.toUpperCase().trim()==='OMNIA') val=`<span class="provider-tag provider-omnia">${val}</span>`;
+            }
+            html += `<div class="data-row"><div class="data-label">${k.replace('_',' ')}</div><div class="data-value">${val}</div></div>`;
+        }
+        cont.innerHTML = html;
+    }
+    function actualizarMapa(d, coordsStr) {
+        const lat = parseFloat(d.LATITUD||d.latitud); const lon = parseFloat(d.LONGITUD||d.longitud);
+        if (isNaN(lat) || isNaN(lon)) { actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, "N/A", null, null, 0); return; }
+        
+        const origStr = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        let distDisplay="0 m", distM=0;
+
+        if (!markerOriginal) {
+            const icon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            markerOriginal = L.marker([lat, lon], { icon: icon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:#007bff; font-weight:bold;">UBICACIÓN ORIGINAL</span><br>${origStr}`).openPopup();
+            map.setView([lat, lon], 15);
+        }
+        
+        if (coordsStr) {
+            const parts = coordsStr.match(/-?\d+(\.\d+)?/g);
+            if (parts && parts.length === 2) {
+                const nLat = parseFloat(parts[0]); const nLon = parseFloat(parts[1]);
+                const distKm = getDistance(lat, lon, nLat, nLon); distM = distKm*1000;
+                distDisplay = distKm < 1 ? `${distM.toFixed(2)} m` : `${distKm.toFixed(2)} km`;
+
+                let color = distM<=8 ? 'green' : 'red';
+                
+                const labelStatus = distM<=8 ? 'UBICACIÓN COINCIDE' : 'NUEVA UBICACIÓN';
+                const colorStyle = distM<=8 ? '#28a745' : '#dc3545';
+
+                const nIcon = new L.Icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+                
+                markerNew = L.marker([nLat, nLon], { icon: nIcon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:${colorStyle}; font-weight:bold;">${labelStatus}</span><br>${nLat.toFixed(6)}, ${nLon.toFixed(6)}`).openPopup();
+                polyline = L.polyline([[lat, lon], [nLat, nLon]], {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
+                map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50] });
+            }
+        }
+        actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM);
+        
+        setTimeout(() => map.invalidateSize(), 100); 
+    }
+</script>
+</body>
+</html>
+

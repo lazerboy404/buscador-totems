@@ -164,8 +164,6 @@ body {
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
-    
-    /* Permite que el botón baje si no cabe */
     flex-wrap: wrap; 
     gap: 10px;
 }
@@ -201,10 +199,10 @@ body {
 /* --- BOTÓN DE REUBICACIÓN (HORIZONTAL) --- */
 #reubicacion-btn-header { 
     display: none; 
-    flex-direction: row; /* Lado a lado */
+    flex-direction: row; 
     align-items: center;
     justify-content: center;
-    gap: 6px; /* Espacio */
+    gap: 6px; 
 
     padding: 5px 12px; 
     width: fit-content; 
@@ -278,9 +276,8 @@ body {
     .data-table { max-height: 350px; }
     #mapa { min-height: 350px; }
 
-    /* --- CAMBIO: TÍTULO MÁS GRANDE PERO RESPONSIVO --- */
     .info-card h2, .map-card h2 { 
-        font-size: 1.35em !important; /* Aumentado para mejor visibilidad */
+        font-size: 1.35em !important; 
         align-items: center;
     }
 
@@ -294,7 +291,6 @@ body {
     .map-info-line { flex-direction: column; align-items: flex-start; }
     #userBar { justify-content: center; padding: 8px; }
 
-    /* Botón ajustado para móvil */
     #reubicacion-btn-header {
         font-size: 0.8em !important;
         padding: 5px 10px !important;
@@ -355,8 +351,8 @@ body {
         <p id="alertaDistancia"></p>
         <div id="mapaInfo" class="map-footer">
             <div id="ubicacion-line" class="map-info-line"><p>Ubicación: [PENDIENTE]</p></div>
-            <div id="coordenadas-line" class="map-info-line"><p><span class="coord-original highlight-text">Coordenadas (Original)</span>: [PENDIENTE]</p></div>
-            <div id="coordenadas-nueva-line" class="map-info-line" style="display:none;"><p><span class="coord-nueva highlight-text">Coordenadas (Nuevas)</span>: [PENDIENTE]</p></div>
+            <div id="coordenadas-line" class="map-info-line"><p><span class="coord-original highlight-text">Coordenadas (Originales)</span>: [PENDIENTE]</p></div>
+            <div id="coordenadas-nueva-line" class="map-info-line" style="display:none;"><p><span class="coord-nueva highlight-text">Coordenadas (Cuadrilla)</span>: [PENDIENTE]</p></div>
             <div class="coord-input-group">
                 <input type="text" id="coordInput" placeholder="Coordenadas de Reubicación (Lat,Lon)">
                 <button id="compararBtn" onclick="window.compararCoordenadas()">COMPARAR</button>
@@ -401,7 +397,6 @@ body {
         'omar.castillo': 'omar castillo ayala',
         'earenas': 'ulises arenas hernandez',
         'luis.edgar7': 'luis edgar bazaldua'
-        // Agrega aquí todos tus usuarios
     };
 
     // DOM Elements
@@ -452,7 +447,6 @@ body {
             // --- ESTADO LOGUEADO ---
             const nombreUsuario = user.email.replace(DOMINIO_INTERNO, '');
             const nombreAMostrar = NOMBRES_COMPLETOS[nombreUsuario] || nombreUsuario;
-            console.log("Sesión:", nombreUsuario);
             
             loginOverlay.classList.add('hidden'); 
             userBar.style.display = 'flex';
@@ -530,6 +524,10 @@ body {
     let totemData = [], map = null, markerOriginal = null, markerNew = null, polyline = null;
     let currentActiveData = null; 
     let cachedNewCoordinates = null; 
+    
+    // NUEVA VARIABLE DE ESTADO
+    let isPropuestaActive = false; 
+    
     const DATA_URL = "https://cdn.jsdelivr.net/gh/lazerboy404/buscador-totems@main/csvjson.json";
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -547,14 +545,8 @@ body {
         const info = document.getElementById('infoTotem');
         info.innerHTML = `<p class="status-message status-loading">Cargando base de datos...</p>`;
         try {
-            // --- CAMBIO IMPLEMENTADO AQUI ---
-            // Creamos una marca de tiempo única (ej. 17156234234)
             const timestamp = new Date().getTime(); 
-            
-            // Le pegamos esa marca al final de la URL: ...json?v=17156234234
             const r = await fetch(`${DATA_URL}?v=${timestamp}`);
-            // --------------------------------
-            
             if (!r.ok) throw new Error();
             totemData = await r.json();
             info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
@@ -565,6 +557,9 @@ body {
 
     // Funciones Window
     window.buscarID = function() {
+        // REINICIAMOS EL ESTADO DE PROPUESTA
+        isPropuestaActive = false; 
+
         const idInput = document.getElementById('idInput');
         const rawIdText = idInput.value;
         let id = '';
@@ -612,30 +607,51 @@ body {
             if (box) { box.classList.remove('anim-fade-in-data'); void box.offsetWidth; box.classList.add('anim-fade-in-data'); }
         });
         
-        actualizarMapa(data, coordInput.value.trim() || null); 
+        actualizarMapa(data, coordInput.value.trim() || null, 'Coordenadas (Cuadrilla)'); 
     };
 
     window.compararCoordenadas = function() {
         if (!currentActiveData) { window.showCustomAlert('Error: Busque un ID primero.'); return; }
         const coordInput = document.getElementById('coordInput');
         let coordsStrToCompare = null;
+        let tipoEtiqueta = 'Coordenadas (Cuadrilla)';
 
         if (cachedNewCoordinates && cachedNewCoordinates.length === 2) {
+            // Caso: Botón morado activado
             coordsStrToCompare = `${cachedNewCoordinates[0]}, ${cachedNewCoordinates[1]}`;
             coordInput.value = coordsStrToCompare; cachedNewCoordinates = null; 
+            
             const btn = document.getElementById('compararBtn');
-            btn.classList.remove('btn-has-cache'); btn.textContent = 'COMPARAR';
+            btn.classList.remove('btn-has-cache'); 
+            btn.textContent = 'COMPARAR';
+            
+            // Activamos bandera y etiqueta
+            isPropuestaActive = true; 
+            tipoEtiqueta = 'Coordenadas (Propuestas)';
+
             coordInput.classList.remove('flash-on-paste'); void coordInput.offsetWidth; coordInput.classList.add('flash-on-paste');
         } else {
+            // Caso: Comparación manual o repetida
             const nums = findAllCoordinateNumbers(coordInput.value);
-            if (nums.length >= 2) { coordsStrToCompare = `${nums[0]}, ${nums[1]}`; coordInput.value = coordsStrToCompare; }
-            else coordInput.value = '';
+            if (nums.length >= 2) { 
+                coordsStrToCompare = `${nums[0]}, ${nums[1]}`; 
+                coordInput.value = coordsStrToCompare; 
+            } else {
+                coordInput.value = '';
+            }
+
+            // Mantenemos etiqueta si la bandera está activa
+            if (isPropuestaActive) {
+                tipoEtiqueta = 'Coordenadas (Propuestas)';
+            }
         }
         limpiarMarcadoresYPolilinea(); 
-        actualizarMapa(currentActiveData, coordsStrToCompare);
+        actualizarMapa(currentActiveData, coordsStrToCompare, tipoEtiqueta);
     };
 
     window.limpiarTodo = function() {
+        isPropuestaActive = false; // Resetear estado
+
         document.getElementById('idInput').value = '';
         document.getElementById('coordInput').value = '';
         cachedNewCoordinates = null;
@@ -701,24 +717,22 @@ body {
         document.getElementById('reubicacion-btn-header').style.display = 'none'; document.getElementById('alertaDistancia').style.display = 'none'; 
         actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null, 0); 
     }
-    function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM) {
+
+    function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM, labelTipo = 'Coordenadas (Cuadrilla)') {
         document.getElementById('ubicacion-line').innerHTML = `<p>Ubicación: <strong>${ubicacion||'[NO ENCONTRADA]'}</strong></p>`;
-        document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Original)</span>: ${orig_coords||'[NO ENCONTRADA]'}</p>`;
+        document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Originales)</span>: ${orig_coords||'[NO ENCONTRADA]'}</p>`;
         const cnLine = document.getElementById('coordenadas-nueva-line');
         const btnHeader = document.getElementById('reubicacion-btn-header');
         const alerta = document.getElementById('alertaDistancia');
         alerta.style.display='none';
 
         if (new_coords) {
-            cnLine.innerHTML = `<p><span class="${distanceM<=8?'coord-coincide':'coord-nueva'} highlight-text">Coordenadas (Nuevas)</span>: ${new_coords}</p>`;
+            cnLine.innerHTML = `<p><span class="${distanceM<=8?'coord-coincide':'coord-nueva'} highlight-text">${labelTipo}</span>: ${new_coords}</p>`;
             cnLine.style.display = 'flex'; 
             
-            // --- ESTRUCTURA INTERNA PARA FLEXBOX ---
-            // JS inserta dos spans, CSS flex-direction: column los apila
             const textoEstado = distanceM<=8 ? 'COINCIDE' : 'REUBICACIÓN';
             btnHeader.innerHTML = `<span>${textoEstado}</span><span>${distancia}</span>`;
             
-            // Asegurar display flex
             btnHeader.style.display = 'inline-flex'; 
             
             btnHeader.style.backgroundColor = distanceM<=8 ? 'var(--accent-green)' : 'var(--accent-red)';
@@ -729,6 +743,7 @@ body {
             }
         } else { cnLine.style.display = 'none'; btnHeader.style.display = 'none'; }
     }
+
     function mostrarInformacion(data, cont) {
         let html = ''; const excl = ['LATITUD','LONGITUD','latitud','longitud','Latitude','Longitude'];
         for (const k in data) {
@@ -742,7 +757,8 @@ body {
         }
         cont.innerHTML = html;
     }
-    function actualizarMapa(d, coordsStr) {
+
+    function actualizarMapa(d, coordsStr, customLabel = 'Coordenadas (Cuadrilla)') {
         const lat = parseFloat(d.LATITUD||d.latitud); const lon = parseFloat(d.LONGITUD||d.longitud);
         if (isNaN(lat) || isNaN(lon)) { actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, "N/A", null, null, 0); return; }
         
@@ -751,6 +767,7 @@ body {
 
         if (!markerOriginal) {
             const icon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            // CAMBIO: UBICACIÓN ORIGINAL
             markerOriginal = L.marker([lat, lon], { icon: icon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:#007bff; font-weight:bold;">UBICACIÓN ORIGINAL</span><br>${origStr}`).openPopup();
             map.setView([lat, lon], 15);
         }
@@ -764,7 +781,7 @@ body {
 
                 let color = distM<=8 ? 'green' : 'red';
                 
-                const labelStatus = distM<=8 ? 'UBICACIÓN COINCIDE' : 'NUEVA UBICACIÓN';
+                const labelStatus = distM<=8 ? 'UBICACIÓN COINCIDE' : 'UBICACIÓN PROPUESTA';
                 const colorStyle = distM<=8 ? '#28a745' : '#dc3545';
 
                 const nIcon = new L.Icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
@@ -774,11 +791,10 @@ body {
                 map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50] });
             }
         }
-        actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM);
+        actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM, customLabel);
         
         setTimeout(() => map.invalidateSize(), 100); 
     }
 </script>
 </body>
 </html>
-

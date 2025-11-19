@@ -547,7 +547,14 @@ body {
         const info = document.getElementById('infoTotem');
         info.innerHTML = `<p class="status-message status-loading">Cargando base de datos...</p>`;
         try {
-            const r = await fetch(DATA_URL);
+            // --- CAMBIO IMPLEMENTADO AQUI ---
+            // Creamos una marca de tiempo única (ej. 17156234234)
+            const timestamp = new Date().getTime(); 
+            
+            // Le pegamos esa marca al final de la URL: ...json?v=17156234234
+            const r = await fetch(`${DATA_URL}?v=${timestamp}`);
+            // --------------------------------
+            
             if (!r.ok) throw new Error();
             totemData = await r.json();
             info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;

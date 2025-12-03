@@ -147,13 +147,20 @@ body {
 #limpiarBtn { background-color: #6c757d; }
 #limpiarBtn:hover { background-color: #5a6268; transform: translateY(-1px); outline: 2px solid rgba(108, 117, 125, 0.7); outline-offset: 2px; }
 
-.content-wrapper { justify-content: center; align-items: stretch; gap: 25px; padding: 0 30px 30px; flex-grow: 1; }
+/* ESTILOS DE TRANSICIÓN PARA EL MAPA */
+.content-wrapper { justify-content: center; align-items: stretch; gap: 25px; padding: 0 30px 30px; flex-grow: 1; transition: all 0.3s ease; }
+
+/* Cuando el mapa está expandido */
+.content-wrapper.full-map .info-card { display: none; }
+.content-wrapper.full-map .map-card { width: 100%; max-width: 100%; height: 85vh; }
+
 .info-card, .map-card {
     width: 48%; max-width: 630px;
     background: var(--bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     padding: 18px; border-radius: 16px; display: flex; flex-direction: column; min-height: 400px;
     box-sizing: border-box; 
+    transition: all 0.3s ease; /* Transición suave para cambios de tamaño */
 }
 
 /* --- TITULOS DE TARJETAS --- */
@@ -170,7 +177,7 @@ body {
     gap: 15px;
 }
 
-/* BOTÓN DE REFRESCAR */
+/* BOTON DE REFRESCAR */
 .refresh-btn {
     background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
     color: white;
@@ -188,7 +195,6 @@ body {
     transform: rotate(180deg) scale(1.1);
     background: linear-gradient(135deg, #00aaff 0%, #0072ff 100%);
 }
-.refresh-tooltip { font-size: 0.5em; opacity: 0; position: absolute; } 
 
 .data-table { background-color: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 4px; flex-grow: 1; overflow-y: auto; max-height: 100%; }
 .data-table .status-message { text-align: center; font-size: 1.1em; padding: 10px; margin: 0; }
@@ -206,8 +212,45 @@ body {
 
 #mapa { background-color: #000; border: 1px solid var(--border-color); border-radius: 4px; flex-grow: 1; min-height: 150px; }
 
-#mapaInfo { display: flex; flex-direction: column; background-color: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 4px; font-family: var(--font-main); margin-bottom: 12px; }
+/* Estilo para el botón personalizado dentro del mapa */
+.leaflet-bar button.custom-map-btn {
+    background-color: rgba(30, 30, 30, 0.85); /* Fondo oscuro semitransparente */
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+    backdrop-filter: blur(4px);
+    display: flex; justify-content: center; align-items: center;
+    transition: background-color 0.2s;
+    border-radius: 4px;
+}
+.leaflet-bar button.custom-map-btn:hover {
+    background-color: var(--accent-blue);
+    color: white;
+}
+
+#mapaInfo { 
+    display: flex; flex-direction: column; 
+    background-color: rgba(0, 0, 0, 0.3); 
+    padding: 12px; border-radius: 4px; 
+    font-family: var(--font-main); 
+    margin-bottom: 12px; 
+    /* Transición para ocultar suavemente */
+    transition: all 0.3s ease-in-out;
+    max-height: 500px;
+    opacity: 1;
+}
 #mapaInfo:not(.visible) { display: none; }
+
+/* CLASE PARA OCULTAR FOOTER Y EXPANDIR MAPA VERTICALMENTE */
+.map-card.expanded-vertical #mapaInfo {
+    display: none !important;
+}
 
 .map-info-line { display: flex; justify-content: space-between; align-items: center; margin: 4px 0; }
 .map-info-line p { margin: 4px 0; font-size: 1.1em; }
@@ -371,17 +414,21 @@ body {
 .custom-alert-box button:hover { background-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3); }
 @keyframes pulse-icon { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } }
 
-/* --- RESPONSIVE OPTIMIZADO (MÓVIL) --- */
+/* --- RESPONSIVE OPTIMIZADO (MÓVIL - VERSIÓN ORIGINAL RESTAURADA) --- */
 @media (max-width: 1000px) {
     
     /* 1. ESTRUCTURA GENERAL COMPACTA */
     body { overflow-y: auto; }
     .content-wrapper { 
-        flex-direction: column-reverse; 
+        flex-direction: column-reverse; /* SE MANTIENE PARA MÓVIL (COMO PEDISTE) */
         align-items: center; 
         padding: 0 10px 20px; 
         gap: 15px; 
     }
+    
+    /* En móvil, NO aplicamos la expansión vertical oculta, para no romper el layout.
+       Además ocultamos el botón de expandir en el mapa porque es solo para desktop */
+    .custom-map-btn { display: none !important; }
     
     .info-card, .map-card { 
         width: 100%; 
@@ -390,15 +437,16 @@ body {
         padding: 15px; 
     }
 
-    /* Títulos reducidos */
+    /* Títulos reducidos y CENTRADOS */
     .info-card h2, .map-card h2 { 
         font-size: 1.1em !important; 
         margin-bottom: 8px;
         padding-bottom: 8px;
+        justify-content: center; 
+        text-align: center;
     }
 
     /* 2. UNIFICACIÓN DE ESTILO DE PASTILLAS (PILLS) */
-    /* Todas las pastillas tienen exactamente el mismo tamaño */
     .alert-pill, 
     .highlight-text, 
     #reubicacion-btn-header {
@@ -418,6 +466,10 @@ body {
         box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
     
+    #reubicacion-btn-header {
+        margin: 5px auto 0 !important; 
+    }
+    
     /* 3. COORDENADAS APILADAS (Vertical) */
     .map-info-line { 
         flex-direction: column; 
@@ -428,9 +480,11 @@ body {
         margin: 0;
     }
     
+    #ubicacion-line p { font-size: 0.9em !important; }
+    
     .map-info-line p {
         display: flex;
-        flex-direction: column; /* Pastilla arriba, número abajo */
+        flex-direction: column; 
         align-items: center;
         gap: 4px;
         font-size: 0.95em;
@@ -438,7 +492,6 @@ body {
         width: 100%;
     }
 
-    /* Texto de los números de coordenadas */
     .map-info-line p strong, 
     .map-info-line p:not(:has(.highlight-text)) {
          margin-top: 2px;
@@ -446,39 +499,25 @@ body {
          font-size: 1.1em; 
     }
 
-    /* 4. OPTIMIZACIÓN DE INPUTS Y BOTONES */
+    /* 4. OPTIMIZACIÓN DE INPUTS */
     .search-container { padding: 15px 5px; }
     .search-label { font-size: 0.9em; margin-bottom: 5px; }
     
-    .search-input-group { 
-        flex-wrap: wrap; 
-        gap: 5px;
-    }
+    .search-input-group { flex-wrap: wrap; gap: 5px; }
     
     #idInput { 
-        width: 100%; 
-        max-width: 100%; 
-        padding: 10px; 
-        font-size: 1em;
+        width: 100%; max-width: 100%; 
+        padding: 10px; font-size: 1em;
+        box-sizing: border-box; 
     }
     
-    /* Botones alineados en fila (50% cada uno) */
     .search-container button { 
-        flex-grow: 1; 
-        width: 48%; 
-        margin: 0;
-        padding: 10px;
-        font-size: 0.9em;
+        flex-grow: 1; width: 48%; 
+        margin: 0; padding: 10px; font-size: 0.9em;
     }
 
-    .coord-input-group { 
-        flex-direction: column; 
-        gap: 8px;
-    }
-    #coordInput, #compararBtn { 
-        width: 100%; 
-        padding: 10px;
-    }
+    .coord-input-group { flex-direction: column; gap: 8px; }
+    #coordInput, #compararBtn { width: 100%; padding: 10px; box-sizing: border-box; }
 
     /* 5. AJUSTES FINALES */
     #userBar { padding: 5px 10px; font-size: 0.75rem; }
@@ -529,7 +568,7 @@ body {
     </div>
 </div>
 
-<main class="content-wrapper" style="display: none;">
+<main id="mainContent" class="content-wrapper" style="display: none;">
     <section class="info-card">
         <h2>
             DATOS DEL TÓTEM
@@ -552,8 +591,8 @@ body {
         
         <div id="mapaInfo" class="map-footer">
             <div id="ubicacion-line" class="map-info-line"><p>Ubicación: [PENDIENTE]</p></div>
-            <div id="coordenadas-line" class="map-info-line"><p><span class="coord-original highlight-text">Coordenadas (Originales)</span>: [PENDIENTE]</p></div>
-            <div id="coordenadas-nueva-line" class="map-info-line" style="display:none;"><p><span class="coord-nueva highlight-text">Coordenadas (Cuadrilla)</span>: [PENDIENTE]</p></div>
+            <div id="coordenadas-line" class="map-info-line"><p><span class="coord-original highlight-text">Coordenadas (Originales):</span> [PENDIENTE]</p></div>
+            <div id="coordenadas-nueva-line" class="map-info-line" style="display:none;"><p><span class="coord-nueva highlight-text">Coordenadas (Cuadrilla):</span> [PENDIENTE]</p></div>
             <div class="coord-input-group">
                 <input type="text" id="coordInput" placeholder="Coordenadas de Reubicación (Lat,Lon)">
                 <button id="compararBtn" onclick="window.compararCoordenadas()">COMPARAR</button>
@@ -728,22 +767,85 @@ body {
     
     // VARIABLE DE ESTADO
     let isPropuestaActive = false; 
+    let isMapExpandedVertical = false; // Estado del mapa (expandido verticalmente)
     
     // URLS PARA CARGA HÍBRIDA
     const DATA_URL_CDN = "https://cdn.jsdelivr.net/gh/lazerboy404/buscador-totems@main/csvjson.json";
     const DATA_URL_RAW = "https://raw.githubusercontent.com/lazerboy404/buscador-totems/main/csvjson.json";
 
     document.addEventListener('DOMContentLoaded', async () => {
-        map = L.map('mapa').setView([19.4326, -99.1332], 12); 
-       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 20
+        // Inicializar mapa sin el control de zoom predeterminado
+        map = L.map('mapa', { zoomControl: false }).setView([19.4326, -99.1332], 12); 
+       
+       // --- MAPA ORIGINAL LEAFLET (OpenStreetMap) ---
+       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19 // Habilitado zoom profundo
         }).addTo(map);
+
+        // Control de zoom ABAJO
         L.control.zoom({ position: 'bottomright' }).addTo(map);
+        
+        // CREACIÓN DE CONTROL PERSONALIZADO (BOTÓN ADENTRO DEL MAPA)
+        const ExpandControl = L.Control.extend({
+            options: { position: 'topleft' }, // Posición solicitada
+            onAdd: function(map) {
+                const container = L.DomUtil.create('div', 'leaflet-bar');
+                const btn = L.DomUtil.create('button', 'custom-map-btn', container);
+                
+                // Icono unicode de expandir diagonal
+                btn.innerHTML = '⤢'; 
+                btn.title = "Expandir/Contraer Mapa Verticalmente";
+                
+                // Evento click
+                btn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation(); // Evitar click en el mapa
+                    toggleMapVertical(btn);
+                };
+                return container;
+            }
+        });
+        map.addControl(new ExpandControl());
+
+        // LISTENER PARA RESETEAR EXPANSIÓN AL CAMBIAR A MODO MÓVIL
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 1000 && isMapExpandedVertical) {
+                // Resetear estado
+                isMapExpandedVertical = false;
+                const mapCard = document.querySelector('.map-card');
+                if(mapCard) mapCard.classList.remove('expanded-vertical');
+
+                // Resetear icono del botón
+                const btn = document.querySelector('.custom-map-btn');
+                if(btn) btn.innerHTML = '⤢';
+
+                // Ajustar mapa
+                map.invalidateSize();
+            }
+        });
+
         // Carga inicial segura por CDN
         await cargarDatos(false);
     });
+
+    // Función para expandir/contraer mapa verticalmente (Solo afecta al footer de la tarjeta)
+    window.toggleMapVertical = function(btnElement) {
+        const mapCard = document.querySelector('.map-card');
+        isMapExpandedVertical = !isMapExpandedVertical;
+        
+        if (isMapExpandedVertical) {
+            mapCard.classList.add('expanded-vertical');
+            if(btnElement) btnElement.innerHTML = '✖'; // Icono cerrar
+        } else {
+            mapCard.classList.remove('expanded-vertical');
+            if(btnElement) btnElement.innerHTML = '⤢'; // Icono expandir
+        }
+        
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 350); 
+    };
 
     // Función de carga con modo seguro (CDN) y modo forzado (RAW)
     async function cargarDatos(forceRaw = false) {
@@ -970,7 +1072,7 @@ body {
 
     function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM, labelTipo = 'Coordenadas (Cuadrilla)') {
         document.getElementById('ubicacion-line').innerHTML = `<p>Ubicación: <strong>${ubicacion||'[NO ENCONTRADA]'}</strong></p>`;
-        document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Originales)</span>: ${orig_coords||'[NO ENCONTRADA]'}</p>`;
+        document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Originales):</span> ${orig_coords||'[NO ENCONTRADA]'}</p>`;
         const cnLine = document.getElementById('coordenadas-nueva-line');
         const btnHeader = document.getElementById('reubicacion-btn-header');
         
@@ -993,7 +1095,7 @@ body {
         }
 
         if (new_coords) {
-            cnLine.innerHTML = `<p><span class="${distanceM<=8?'coord-coincide':'coord-nueva'} highlight-text">${labelTipo}</span>: ${new_coords}</p>`;
+            cnLine.innerHTML = `<p><span class="${distanceM<=8?'coord-coincide':'coord-nueva'} highlight-text">${labelTipo}:</span> ${new_coords}</p>`;
             cnLine.style.display = 'flex'; 
             
             const textoEstado = distanceM<=8 ? 'COINCIDE' : 'REUBICACIÓN';
@@ -1054,7 +1156,9 @@ body {
             const icon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
             // CAMBIO: UBICACIÓN ORIGINAL
             markerOriginal = L.marker([lat, lon], { icon: icon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:#007bff; font-weight:bold;">UBICACIÓN ORIGINAL</span><br>${origStr}`).openPopup();
-            map.setView([lat, lon], 15);
+            
+            // --- ZOOM MENOS PROFUNDO (13) ---
+            map.setView([lat, lon], 16);
         }
         
         if (coordsStr) {
@@ -1073,7 +1177,7 @@ body {
                 
                 markerNew = L.marker([nLat, nLon], { icon: nIcon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:${colorStyle}; font-weight:bold;">${labelStatus}</span><br>${nLat.toFixed(6)}, ${nLon.toFixed(6)}`).openPopup();
                 polyline = L.polyline([[lat, lon], [nLat, nLon]], {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
-                map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50] });
+                map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50], maxZoom: 16 });
             }
         }
         actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM, customLabel);

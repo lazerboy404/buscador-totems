@@ -149,12 +149,14 @@ body {
 
 .content-wrapper { justify-content: center; align-items: stretch; gap: 25px; padding: 0 30px 30px; flex-grow: 1; }
 .info-card, .map-card {
-    width: 45%; max-width: 600px;
+    width: 48%; max-width: 630px;
     background: var(--bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--border-color); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     padding: 18px; border-radius: 16px; display: flex; flex-direction: column; min-height: 400px;
     box-sizing: border-box; 
 }
+
+/* --- TITULOS DE TARJETAS (MODIFICADO) --- */
 .info-card h2, .map-card h2 { 
     color: var(--accent-blue); 
     border-bottom: 1px solid var(--border-color); 
@@ -162,11 +164,32 @@ body {
     margin-bottom: 12px; 
     font-size: 1.6em; 
     display: flex; 
-    justify-content: space-between; 
+    /* Cambiado para alinear botón junto al texto */
+    justify-content: flex-start; 
     align-items: center; 
     flex-wrap: wrap; 
-    gap: 10px;
+    gap: 15px; /* Espacio entre título y botón */
 }
+
+/* BOTÓN DE REFRESCAR BASE DE DATOS */
+.refresh-btn {
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 35px; height: 35px;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+}
+.refresh-btn:hover {
+    transform: rotate(180deg) scale(1.1);
+    background: linear-gradient(135deg, #00aaff 0%, #0072ff 100%);
+}
+.refresh-tooltip { font-size: 0.5em; opacity: 0; position: absolute; } 
 
 .data-table { background-color: rgba(0, 0, 0, 0.3); padding: 10px; border-radius: 4px; flex-grow: 1; overflow-y: auto; max-height: 100%; }
 .data-table .status-message { text-align: center; font-size: 1.1em; padding: 10px; margin: 0; }
@@ -193,41 +216,116 @@ body {
 .coord-input-group { display: flex; margin-top: 10px; gap: 8px; }
 #coordInput { padding: 10px 12px; flex-grow: 1; font-family: var(--font-data); font-size: 1em; background: rgba(0, 0, 0, 0.3); color: #fff; border: 1.5px solid #444; border-radius: 8px; transition: all 0.3s ease; }
 #coordInput:focus { border-color: var(--accent-blue); box-shadow: 0 0 15px rgba(0, 170, 255, 0.5), 0 0 5px rgba(0, 170, 255, 0.8) inset; outline: none; background: rgba(0, 0, 0, 0.2); }
-#compararBtn { padding: 10px 18px; background-color: #6c757d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.2s; font-size: 1em; }
-#compararBtn:hover { background-color: #5a6268; outline: 2px solid rgba(108, 117, 125, 0.7); outline-offset: 2px; transform: translateY(-1px); }
 
-/* --- BOTÓN DE REUBICACIÓN (HORIZONTAL) --- */
+/* --- BOTONES MAPA (ESTILO GRADIENTE) --- */
+#compararBtn { 
+    padding: 10px 18px; 
+    background: linear-gradient(135deg, #00aaff 0%, #0072ff 100%);
+    color: white; 
+    border: none; 
+    border-radius: 8px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    font-size: 1em;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+#compararBtn:hover { 
+    filter: brightness(1.1); 
+    transform: translateY(-1px); 
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+
+/* BOTÓN DE REUBICACIÓN (ENCABEZADO - TIPO PASTILLA) */
 #reubicacion-btn-header { 
     display: none; 
     flex-direction: row; 
     align-items: center;
     justify-content: center;
     gap: 6px; 
-
-    padding: 5px 12px; 
+    padding: 6px 18px; /* Ajuste para pastilla */
     width: fit-content; 
-    
-    background-color: var(--accent-red); 
     color: white; 
     border: none; 
-    border-radius: 8px; 
+    border-radius: 50px; /* Redondeado tipo pastilla */
     font-weight: bold; 
-    font-size: 0.7em; 
+    
+    font-size: 0.6em; 
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
     
     cursor: default; 
-    align-self: flex-end; 
-    margin-bottom: -5px; 
-    text-align: center; 
+    margin-left: auto;  /* Esto empuja el botón a la derecha */
+    align-self: center; /* Alineación vertical centrada */
+    margin-bottom: 0;
     line-height: 1.4; 
-    
     white-space: nowrap; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
 }
 
-#alertaDistancia { display: none; color: var(--accent-red-intense); background-color: var(--accent-yellow-vibrant); font-weight: bold; text-align: center; font-size: 1em; padding: 8px; border-radius: 4px; margin: -5px 0 10px 0; }
+/* --- ALERTAS TIPO PASTILLA (PILLS) --- */
+#alertaDistancia { 
+    display: none; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 8px; 
+    margin: -5px 0 12px 0; 
+    background: transparent; 
+}
 
-.highlight-text { font-weight: bold; color: white !important; padding: 3px 6px; border-radius: 4px; line-height: 1.5; }
-.coord-original { background-color: var(--accent-blue); } .coord-nueva { background-color: var(--accent-red); } .coord-coincide { background-color: var(--accent-green); }
+.alert-pill {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 50px; 
+    font-weight: 700;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    letter-spacing: 0.5px;
+    text-align: center;
+    animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    line-height: 1.4;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+.alert-priority {
+    background: linear-gradient(135deg, #ff8c00 0%, #ff4500 100%); 
+    color: white;
+}
+
+.alert-distance-pill {
+    background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%); 
+    color: white;
+}
+
+@keyframes pop-in { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+/* --- ETIQUETAS COORDENADAS (TIPO PASTILLA CON DEGRADADOS) --- */
+.highlight-text { 
+    font-weight: bold; 
+    color: white !important; 
+    padding: 5px 12px; /* Más padding para forma pastilla */
+    border-radius: 50px; /* Redondeado completo */
+    line-height: 1.5;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+    display: inline-block;
+}
+
+/* Degradado Azul (Originales) */
+.coord-original { 
+    background: linear-gradient(135deg, #00aaff 0%, #0072ff 100%); 
+} 
+/* Degradado Rojo (Nueva/Reubicación) */
+.coord-nueva { 
+    background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%); 
+} 
+/* Degradado Verde (Coincide) */
+.coord-coincide { 
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); 
+}
 
 /* --- POPUP AJUSTADO AL TEXTO --- */
 .leaflet-popup-content-wrapper { 
@@ -248,9 +346,26 @@ body {
 
 @keyframes flash-highlight { from { background: var(--accent-yellow-vibrant); color: #1e1e1e; transform: scale(1.02); border-color: var(--accent-yellow-vibrant); } to { background: rgba(0,0,0,0.2); color: var(--text-light); transform: scale(1); border-color: var(--border-color); } }
 .flash-on-paste { animation: flash-highlight 0.6s ease-out 1; }
-@keyframes pulse-yellow { 0% { transform: scale(1); box-shadow: 0 0 4px rgba(243, 196, 39, 0.4); } 50% { transform: scale(1.04); box-shadow: 0 0 16px rgba(243, 196, 39, 0.9); } 100% { transform: scale(1); box-shadow: 0 0 4px rgba(243, 196, 39, 0.4); } }
-#compararBtn.btn-has-cache { background-color: #8A2BE2; color: #ffffff; font-size: 0.9em; line-height: 1.3; font-weight: 700; border: 1.5px solid rgba(255, 255, 255, 0.8); animation: pulse-yellow 1.8s infinite ease-in-out; }
-#compararBtn.btn-has-cache:hover { background-color: #9370DB; color: #ffffff; transform: translateY(-1px) scale(1.04); outline: none; }
+
+@keyframes pulse-purple { 
+    0% { transform: scale(1); box-shadow: 0 0 4px rgba(138, 43, 226, 0.4); } 
+    50% { transform: scale(1.04); box-shadow: 0 0 16px rgba(138, 43, 226, 0.9); } 
+    100% { transform: scale(1); box-shadow: 0 0 4px rgba(138, 43, 226, 0.4); } 
+}
+#compararBtn.btn-has-cache { 
+    background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 100%);
+    color: #ffffff; 
+    font-size: 0.9em; 
+    line-height: 1.3; 
+    font-weight: 700; 
+    border: 1.5px solid rgba(255, 255, 255, 0.8); 
+    animation: pulse-purple 1.8s infinite ease-in-out; 
+}
+#compararBtn.btn-has-cache:hover { 
+    filter: brightness(1.2);
+    transform: translateY(-1px) scale(1.04); 
+    outline: none; 
+}
 
 @keyframes fall-away-clean { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(30px) scale(0.98); } }
 .anim-fall-away-clean { animation: fall-away-clean 0.4s ease-in 1; }
@@ -292,9 +407,16 @@ body {
     #userBar { justify-content: center; padding: 8px; }
 
     #reubicacion-btn-header {
-        font-size: 0.8em !important;
+        font-size: 0.6em !important;
         padding: 5px 10px !important;
         max-width: 100%;
+
+        margin-left: auto !important;   /* Empuje automático desde la izquierda */
+        margin-right: auto !important;  /* Empuje automático desde la derecha */
+        /* Al tener auto en ambos lados, se queda en el centro */
+        
+        display: flex !important;       /* Asegura que se comporte como bloque flexible */
+        margin-top: 8px;
     }
 }
 
@@ -337,7 +459,12 @@ body {
 
 <main class="content-wrapper" style="display: none;">
     <section class="info-card">
-        <h2>DATOS DEL TÓTEM</h2> 
+        <h2>
+            DATOS DEL TÓTEM
+            <button id="refreshDataBtn" class="refresh-btn" onclick="window.forzarRecarga()" title="Actualizar Datos (Forzar)">
+                🔄
+            </button>
+        </h2> 
         <div id="infoTotem" class="data-table">
             <p class="status-message status-loading">Cargando base de datos...</p>
         </div>
@@ -348,7 +475,9 @@ body {
             UBICACIÓN GEOGRÁFICA
             <span id="reubicacion-btn-header" style="display:none;"></span>
         </h2>
-        <p id="alertaDistancia"></p>
+        
+        <div id="alertaDistancia"></div>
+        
         <div id="mapaInfo" class="map-footer">
             <div id="ubicacion-line" class="map-info-line"><p>Ubicación: [PENDIENTE]</p></div>
             <div id="coordenadas-line" class="map-info-line"><p><span class="coord-original highlight-text">Coordenadas (Originales)</span>: [PENDIENTE]</p></div>
@@ -411,7 +540,7 @@ body {
     const userBar = document.getElementById('userBar');
     const userDisplay = document.getElementById('userDisplay');
 
-    // --- LÓGICA DE INACTIVIDAD (15 MINUTOS) ---
+    // --- LÓGICA DE INACTIVIDAD (1 HORA) ---
     let inactivityTimeout;
     const TIMEOUT_DURATION = 60 * 60 * 1000; 
 
@@ -525,10 +654,12 @@ body {
     let currentActiveData = null; 
     let cachedNewCoordinates = null; 
     
-    // NUEVA VARIABLE DE ESTADO
+    // VARIABLE DE ESTADO
     let isPropuestaActive = false; 
     
-    const DATA_URL = "https://cdn.jsdelivr.net/gh/lazerboy404/buscador-totems@main/csvjson.json";
+    // URLS PARA CARGA HÍBRIDA
+    const DATA_URL_CDN = "https://cdn.jsdelivr.net/gh/lazerboy404/buscador-totems@main/csvjson.json";
+    const DATA_URL_RAW = "https://raw.githubusercontent.com/lazerboy404/buscador-totems/main/csvjson.json";
 
     document.addEventListener('DOMContentLoaded', async () => {
         map = L.map('mapa').setView([19.4326, -99.1332], 12); 
@@ -538,48 +669,95 @@ body {
             maxZoom: 20
         }).addTo(map);
         L.control.zoom({ position: 'bottomright' }).addTo(map);
-        await cargarDatos();
+        // Carga inicial segura por CDN
+        await cargarDatos(false);
     });
 
-    async function cargarDatos() {
+    // Función de carga con modo seguro (CDN) y modo forzado (RAW)
+    async function cargarDatos(forceRaw = false) {
         const info = document.getElementById('infoTotem');
-        info.innerHTML = `<p class="status-message status-loading">Cargando base de datos...</p>`;
+        info.innerHTML = `<p class="status-message status-loading">${forceRaw ? 'Actualizando desde GitHub...' : 'Cargando base de datos...'}</p>`;
+        
         try {
             const timestamp = new Date().getTime(); 
-            const r = await fetch(`${DATA_URL}?v=${timestamp}`);
+            // Si es forzado, usa RAW. Si no, usa CDN.
+            const urlBase = forceRaw ? DATA_URL_RAW : DATA_URL_CDN;
+            
+            const r = await fetch(`${urlBase}?v=${timestamp}`);
             if (!r.ok) throw new Error();
+            
             totemData = await r.json();
-            info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
+            
+            if (forceRaw) {
+                info.innerHTML = `<p class="status-message status-success">¡Datos actualizados correctamente!</p>`;
+                setTimeout(() => {
+                   if (currentActiveData) {
+                       // Si hay un totem seleccionado, intentar recargar su info
+                       const nuevoData = totemData.find(d => d.ID === currentActiveData.ID || d.id === currentActiveData.id);
+                       if(nuevoData) { 
+                           currentActiveData = nuevoData;
+                           mostrarInformacion(nuevoData, info);
+                       }
+                   } else {
+                       info.innerHTML = `<p class="status-message status-success">Base de datos lista.</p>`;
+                   }
+                }, 1000);
+            } else {
+                info.innerHTML = `<p class="status-message status-success">Datos cargados listo para buscar.</p>`;
+            }
         } catch {
             info.innerHTML = `<p class="status-message" style="color:red;">Error al cargar datos.</p>`;
         }
     }
 
+    // Expone la función de recarga forzada
+    window.forzarRecarga = function() {
+        // Confirmación simple para evitar clics accidentales constantes
+        if(confirm("¿Deseas descargar la versión más reciente desde GitHub? (Úsalo solo si faltan datos recientes)")) {
+            cargarDatos(true);
+        }
+    };
+
     // Funciones Window
     window.buscarID = function() {
-        // REINICIAMOS EL ESTADO DE PROPUESTA
-        isPropuestaActive = false; 
-
+        // --- INICIO: AUTOLIMPIEZA ---
         const idInput = document.getElementById('idInput');
-        const rawIdText = idInput.value;
+        const rawIdText = idInput.value; 
+
+        // Reseteamos variables globales
+        isPropuestaActive = false; 
+        currentActiveData = null; 
+        cachedNewCoordinates = null;
+        
+        // Limpiamos visualmente el mapa y alertas
+        limpiarMapa(false); 
+        document.getElementById('reubicacion-btn-header').style.display = 'none'; 
+        document.getElementById('alertaDistancia').style.display = 'none'; 
+        
+        // Limpiamos la tabla de información
+        document.getElementById('infoTotem').innerHTML = `<p class="status-message status-loading">Buscando...</p>`;
+        
+        // Reseteamos el botón de comparar
+        const compararBtn = document.getElementById('compararBtn');
+        compararBtn.classList.remove('btn-has-cache'); 
+        compararBtn.textContent = 'COMPARAR';
+        // --- FIN: AUTOLIMPIEZA ---
+
+        // Lógica ID
         let id = '';
         const idMatch = rawIdText.match(/MC\d+/i);
         if (idMatch) { id = idMatch[0].toUpperCase(); } else { id = rawIdText.trim().toUpperCase(); }
         idInput.value = id; 
         
-        cachedNewCoordinates = null; 
+        // Lógica Coordenadas (WhatsApp)
         const coordInput = document.getElementById('coordInput');
+        coordInput.value = ''; // Limpiamos input previo
         const allNumbers = findAllCoordinateNumbers(rawIdText);
         if (allNumbers.length >= 4) { coordInput.value = `${allNumbers[0]}, ${allNumbers[1]}`; cachedNewCoordinates = [allNumbers[2], allNumbers[3]]; }
         else if (allNumbers.length >= 2) { coordInput.value = `${allNumbers[0]}, ${allNumbers[1]}`; }
         
-        const compararBtn = document.getElementById('compararBtn');
         if (cachedNewCoordinates) { compararBtn.classList.add('btn-has-cache'); compararBtn.textContent = 'PROPUESTA ENCONTRADA'; }
-        else { compararBtn.classList.remove('btn-has-cache'); compararBtn.textContent = 'COMPARAR'; }
-
-        limpiarMapa(false); 
-        currentActiveData = null; 
-
+        
         const info = document.getElementById('infoTotem');
         if (!id) { info.innerHTML = `<p class="status-message">Ingrese un ID.</p>`; return; }
         
@@ -723,8 +901,24 @@ body {
         document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Originales)</span>: ${orig_coords||'[NO ENCONTRADA]'}</p>`;
         const cnLine = document.getElementById('coordenadas-nueva-line');
         const btnHeader = document.getElementById('reubicacion-btn-header');
+        
+        // Referencia a la alerta
         const alerta = document.getElementById('alertaDistancia');
-        alerta.style.display='none';
+        alerta.innerHTML = ''; 
+        alerta.style.display='none'; 
+
+        let htmlAlertas = '';
+
+        // 1. ZONA PRIORITARIA (Chequeo inmediato, independiente, TIPO PASTILLA)
+        if (currentActiveData) {
+            const nivelKey = Object.keys(currentActiveData).find(k => k.toUpperCase() === 'NIVEL');
+            if (nivelKey && currentActiveData[nivelKey]) {
+                const valorNivel = String(currentActiveData[nivelKey]).toUpperCase();
+                if (valorNivel.includes('ZONA PRIORITARIA') || valorNivel.includes('ZONAS PRIORITARIAS')) {
+                    htmlAlertas += '<span class="alert-pill alert-priority">⚠️ PRIORIDAD ALTA NO SE PUEDE REUBICAR A MAS DE 50 M ⚠️</span>';
+                }
+            }
+        }
 
         if (new_coords) {
             cnLine.innerHTML = `<p><span class="${distanceM<=8?'coord-coincide':'coord-nueva'} highlight-text">${labelTipo}</span>: ${new_coords}</p>`;
@@ -735,13 +929,32 @@ body {
             
             btnHeader.style.display = 'inline-flex'; 
             
-            btnHeader.style.backgroundColor = distanceM<=8 ? 'var(--accent-green)' : 'var(--accent-red)';
-            
-            if (distanceM > 100 && distanceM > 8) { 
-                alerta.textContent = '☠️ ¡Atención! La distancia excede los 100 metros permitidos. ☠️'; 
-                alerta.style.display = 'block'; 
+            // APLICAR GRADIENTES AL BOTÓN DEL ENCABEZADO
+            if (distanceM <= 8) {
+                // Verde
+                btnHeader.style.background = 'linear-gradient(135deg, #28a745 0%, #1e7e34 100%)';
+            } else {
+                // Rojo (usando el mismo que la alerta de distancia)
+                btnHeader.style.background = 'linear-gradient(135deg, #e53935 0%, #b71c1c 100%)';
             }
-        } else { cnLine.style.display = 'none'; btnHeader.style.display = 'none'; }
+            // Limpiar background-color sólido por si acaso
+            btnHeader.style.backgroundColor = '';
+            
+            // 2. DISTANCIA (TIPO PASTILLA)
+            if (distanceM > 80 && distanceM > 8) { 
+                htmlAlertas += '<span class="alert-pill alert-distance-pill">☠️ Distancia excede 80m ☠️</span>';
+            }
+            
+        } else { 
+            cnLine.style.display = 'none'; 
+            btnHeader.style.display = 'none'; 
+        }
+
+        // Renderizar si hay alertas
+        if (htmlAlertas !== '') {
+            alerta.innerHTML = htmlAlertas;
+            alerta.style.display = 'flex';
+        }
     }
 
     function mostrarInformacion(data, cont) {

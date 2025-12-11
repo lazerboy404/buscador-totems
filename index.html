@@ -758,6 +758,24 @@ body {
 
     // --- MAPA Y DATOS ---
     let totemData = [], map = null, markerOriginal = null, markerNew = null, polyline = null;
+    
+    // --- VARIABLES NUEVAS (MI CALLE) ---
+    let miCalleData = []; 
+    let blackMarkers = []; 
+    let measureLine = null;
+    const DATA_URL_MICALLE = "https://cdn.jsdelivr.net/gh/lazerboy404/buscador-totems@main/csvjson-micalle.json";
+    // URL RAW para forzar actualización
+    const DATA_URL_MICALLE_RAW = "https://raw.githubusercontent.com/lazerboy404/buscador-totems/main/csvjson-micalle.json";
+
+    // --- ICONO NEGRO ---
+    const blackIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
     let currentActiveData = null; 
     let cachedNewCoordinates = null; 
     
@@ -823,6 +841,8 @@ body {
 
         // Carga inicial segura por CDN
         await cargarDatos(false);
+        // --- CARGAR BASE MI CALLE ---
+        cargarDatosMiCalle();
     });
 
     // Función para expandir/contraer mapa verticalmente (Solo afecta al footer de la tarjeta)
@@ -879,6 +899,40 @@ body {
             info.innerHTML = `<p class="status-message" style="color:red;">Error al cargar datos.</p>`;
         }
     }
+
+    // Función nueva para cargar Mi Calle
+    // Función nueva para cargar Mi Calle (CON ANTI-CACHÉ Y DEBUG)
+    // Función nueva para cargar Mi Calle (Soporta Forzar RAW)
+    async function cargarDatosMiCalle(forceRaw = false) {
+        try {
+            // Elegimos URL dependiendo si forzamos o no
+            const urlBase = forceRaw ? DATA_URL_MICALLE_RAW : DATA_URL_MICALLE;
+            
+            // Siempre agregamos timestamp para romper caché local
+            const urlConCache = `${urlBase}?v=${new Date().getTime()}`;
+            
+            if (forceRaw) console.log("🔄 Forzando actualización RAW para 'Mi Calle'...");
+
+            const r = await fetch(urlConCache);
+            
+            if (r.ok) {
+                miCalleData = await r.json();
+                console.log(`✅ Base Mi Calle cargada (${forceRaw ? 'RAW' : 'CDN'}): ${miCalleData.length} registros.`);
+            } else {
+                console.error("❌ Error descargando Mi Calle:", r.status);
+            }
+        } catch (e) { console.error("❌ Error CRÍTICO cargando Mi Calle", e); }
+    }
+    // ↑↑↑ FIN DE LA NUEVA FUNCIÓN
+
+
+    // Expone la función de recarga forzada (Línea 843 aprox)
+    window.forzarRecarga = function() {
+        // Confirmación simple para evitar clics accidentales constantes
+        if(confirm("¿Deseas descargar la versión más reciente desde GitHub? (Úsalo solo si faltan datos recientes)")) {
+            cargarDatos(true);
+        }
+    };
 
     // Expone la función de recarga forzada
     window.forzarRecarga = function() {
@@ -1027,8 +1081,24 @@ body {
         }, 400);
     };
 
-    window.showCustomAlert = (msg) => { const b=document.getElementById('customAlert'); document.getElementById('customAlertMessage').innerHTML=msg; b.style.display='flex'; setTimeout(()=>b.classList.add('visible'),10); };
-    window.closeCustomAlert = () => { const b=document.getElementById('customAlert'); b.classList.remove('visible'); setTimeout(()=>b.style.display='none',300); };
+    // Helper de Alerta Mejorado (Soporta cambiar el emoji)
+    window.showCustomAlert = (msg, icon = '⚠️') => { 
+        const b = document.getElementById('customAlert'); 
+        document.getElementById('customAlertMessage').innerHTML = msg; 
+        
+        // Cambiamos el icono dinámicamente
+        const iconElem = document.querySelector('.custom-alert-icon');
+        if(iconElem) iconElem.innerText = icon;
+        
+        b.style.display = 'flex'; 
+        setTimeout(() => b.classList.add('visible'), 10); 
+    };
+
+    window.closeCustomAlert = () => { 
+        const b = document.getElementById('customAlert'); 
+        b.classList.remove('visible'); 
+        setTimeout(() => b.style.display = 'none', 300); 
+    };
 
     // Helpers
     function findAllCoordinateNumbers(text) {
@@ -1048,7 +1118,18 @@ body {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
     function limpiarMarcadoresYPolilinea() {
-        if (markerNew) map.removeLayer(markerNew); if (polyline) map.removeLayer(polyline);
+        if (markerNew) map.removeLayer(markerNew); 
+        if (polyline) map.removeLayer(polyline);
+        
+        // Limpiar pines negros
+        if (blackMarkers.length > 0) {
+            blackMarkers.forEach(bm => map.removeLayer(bm));
+            blackMarkers = [];
+        }
+        
+        // --- NUEVO: LIMPIAR LÍNEA DE MEDICIÓN ---
+        if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+        
         markerNew = null; polyline = null;
         document.getElementById('reubicacion-btn-header').style.display = 'none'; 
         document.getElementById('alertaDistancia').style.display = 'none'; 
@@ -1059,8 +1140,21 @@ body {
         }
         if (markerOriginal) markerOriginal.openPopup();
     }
+
     function limpiarMapa(clearInputs) {
-        if (markerOriginal) map.removeLayer(markerOriginal); if (markerNew) map.removeLayer(markerNew); if (polyline) map.removeLayer(polyline);
+        if (markerOriginal) map.removeLayer(markerOriginal); 
+        if (markerNew) map.removeLayer(markerNew); 
+        if (polyline) map.removeLayer(polyline);
+        
+        // Limpiar pines negros
+        if (blackMarkers.length > 0) {
+            blackMarkers.forEach(bm => map.removeLayer(bm));
+            blackMarkers = [];
+        }
+
+        // --- NUEVO: LIMPIAR LÍNEA DE MEDICIÓN ---
+        if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+        
         markerOriginal = null; markerNew = null; polyline = null; currentActiveData = null;
         document.getElementById('reubicacion-btn-header').style.display = 'none'; document.getElementById('alertaDistancia').style.display = 'none'; 
         actualizarInfoMapa("PENDIENTE", "PENDIENTE", null, null, 0); 
@@ -1142,30 +1236,43 @@ body {
     }
 
     function actualizarMapa(d, coordsStr, customLabel = 'Coordenadas (Cuadrilla)') {
+        // 1. Limpieza previa
+        if (blackMarkers.length > 0) {
+            blackMarkers.forEach(bm => map.removeLayer(bm));
+            blackMarkers = [];
+        }
+        if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+
         const lat = parseFloat(d.LATITUD||d.latitud); const lon = parseFloat(d.LONGITUD||d.longitud);
         if (isNaN(lat) || isNaN(lon)) { actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, "N/A", null, null, 0); return; }
         
         const origStr = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         let distDisplay="0 m", distM=0;
+        
+        let checkLat = lat;
+        let checkLon = lon;
+        let puntoReferenciaNombre = "Ubicación Original"; 
 
+        // Pin Original
         if (!markerOriginal) {
             const icon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-            // CAMBIO: UBICACIÓN ORIGINAL
             markerOriginal = L.marker([lat, lon], { icon: icon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:#007bff; font-weight:bold;">UBICACIÓN ORIGINAL</span><br>${origStr}`).openPopup();
-            
-            // --- ZOOM MENOS PROFUNDO (13) ---
             map.setView([lat, lon], 16);
         }
         
+        // Pin Propuesta
         if (coordsStr) {
             const parts = coordsStr.match(/-?\d+(\.\d+)?/g);
             if (parts && parts.length === 2) {
                 const nLat = parseFloat(parts[0]); const nLon = parseFloat(parts[1]);
+                checkLat = nLat;
+                checkLon = nLon;
+                puntoReferenciaNombre = "Propuesta (Cuadrilla)";
+
                 const distKm = getDistance(lat, lon, nLat, nLon); distM = distKm*1000;
                 distDisplay = distKm < 1 ? `${distM.toFixed(2)} m` : `${distKm.toFixed(2)} km`;
 
                 let color = distM<=4 ? 'green' : 'red';
-                
                 const labelStatus = distM<=4 ? 'UBICACIÓN COINCIDE' : 'UBICACIÓN PROPUESTA';
                 const colorStyle = distM<=4 ? '#28a745' : '#FF0000';
 
@@ -1176,8 +1283,68 @@ body {
                 map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50], maxZoom: 16 });
             }
         }
+
+        // --- LÓGICA DE DETECCIÓN (RANGO 100 METROS) ---
+        if (miCalleData.length > 0) {
+            const RANGO_METROS = 100;
+            console.log(`🔍 Buscando conflictos (Radio ${RANGO_METROS}m)`);
+            
+            miCalleData.forEach(item => {
+                const mcLat = parseFloat(item.LATITUD || item.Latitud || item.latitud || item.latitude || 0);
+                const mcLon = parseFloat(item.LONGITUD || item.Longitud || item.longitud || item.longitude || 0);
+
+                if (mcLat !== 0 && mcLon !== 0) {
+                    const distConflicto = getDistance(checkLat, checkLon, mcLat, mcLon) * 1000; 
+                    
+                    if (distConflicto <= RANGO_METROS) {
+                        const bm = L.marker([mcLat, mcLon], { icon: blackIcon }).addTo(map);
+                        
+                        // --- POPUP ACTUALIZADO (CON LAT/LON) ---
+                        bm.bindPopup(`
+                            <div style="font-family: 'Roboto Mono', monospace; font-size: 0.9em;">
+                                <strong>ID:</strong> ${item.IDTOTEM || item.ID || 'S/N'}<br>
+                                <strong>PROYECTO:</strong> ${item.PROYECTO || 'Mi Calle'}<br>
+                                <hr style="margin: 4px 0; border: 0; border-top: 1px solid #ccc;">
+                                <strong>Lat:</strong> ${mcLat.toFixed(6)}<br>
+                                <strong>Lon:</strong> ${mcLon.toFixed(6)}<br>
+                                <hr style="margin: 4px 0; border: 0; border-top: 1px solid #ccc;">
+                                Distancia a ${puntoReferenciaNombre}:<br>
+                                <strong style="font-size:1.1em; color:#e67e22;">${distConflicto.toFixed(2)} metros</strong>
+                            </div>
+                        `);
+
+                        // Evento Clic para medir
+                        bm.on('click', () => {
+                            if (measureLine) map.removeLayer(measureLine);
+                            measureLine = L.polyline([[checkLat, checkLon], [mcLat, mcLon]], {
+                                color: 'orange',
+                                dashArray: '10, 10', 
+                                weight: 3,
+                                opacity: 0.8
+                            }).addTo(map);
+                        });
+                        
+                        blackMarkers.push(bm);
+                    }
+                }
+            });
+
+            if (blackMarkers.length > 0) {
+                // --- ALERTA VISUAL NUEVA ---
+                // Usamos el icono '🛑' para indicar prohibición
+                window.showCustomAlert(
+                    `<strong>CRUCE DE PROYECTOS DETECTADO</strong><br><br>
+                     Se encontraron <strong>${blackMarkers.length}</strong> tótems de "Mi Calle" en un radio de 100m.<br><br>
+                     <span style="color:#ff4444; font-size:1.1em; font-weight:bold; border: 1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1);">
+                        NO SE PUEDE INSTALAR CERCA DE OTROS PROYECTOS
+                     </span><br><br>
+                     <span style="font-size:0.8em; color:#ccc;">Haz clic en los pines negros para ver la distancia exacta.</span>`,
+                    "🛑" 
+                );
+            }
+        }
+
         actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM, customLabel);
-        
         setTimeout(() => map.invalidateSize(), 100); 
     }
 </script>

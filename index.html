@@ -389,6 +389,7 @@ body {
 .coord-original { background: linear-gradient(135deg, #00aaff 0%, #0072ff 100%); } 
 .coord-nueva { background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%); } 
 .coord-coincide { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
+.coord-micalle { background: linear-gradient(135deg, #1e1e1e 0%, #444 100%); border: 1px solid #666; }
 
 /* --- POPUP --- */
 .leaflet-popup-content-wrapper { 
@@ -944,38 +945,33 @@ body {
 
     // Funciones Window
     window.buscarID = function() {
-        // --- INICIO: AUTOLIMPIEZA ---
+        // --- AUTOLIMPIEZA ---
         const idInput = document.getElementById('idInput');
         const rawIdText = idInput.value; 
 
-        // Reseteamos variables globales
         isPropuestaActive = false; 
         currentActiveData = null; 
         cachedNewCoordinates = null;
         
-        // Limpiamos visualmente el mapa y alertas
         limpiarMapa(false); 
         document.getElementById('reubicacion-btn-header').style.display = 'none'; 
         document.getElementById('alertaDistancia').style.display = 'none'; 
-        
-        // Limpiamos la tabla de información
         document.getElementById('infoTotem').innerHTML = `<p class="status-message status-loading">Buscando...</p>`;
         
-        // Reseteamos el botón de comparar
         const compararBtn = document.getElementById('compararBtn');
         compararBtn.classList.remove('btn-has-cache'); 
         compararBtn.textContent = 'COMPARAR';
-        // --- FIN: AUTOLIMPIEZA ---
 
-        // Lógica ID
+        // 1. Preparar ID
         let id = '';
-        const idMatch = rawIdText.match(/MC\d+/i);
-        if (idMatch) { id = idMatch[0].toUpperCase(); } else { id = rawIdText.trim().toUpperCase(); }
+        const idMatch = rawIdText.match(/(MC|TOT)\d+/i); 
+        if (idMatch) { id = idMatch[0].toUpperCase(); } 
+        else { id = rawIdText.trim().toUpperCase(); }
         idInput.value = id; 
-        
-        // Lógica Coordenadas (WhatsApp)
+
+        // 2. Extraer Coordenadas
         const coordInput = document.getElementById('coordInput');
-        coordInput.value = ''; // Limpiamos input previo
+        coordInput.value = ''; 
         const allNumbers = findAllCoordinateNumbers(rawIdText);
         if (allNumbers.length >= 4) { coordInput.value = `${allNumbers[0]}, ${allNumbers[1]}`; cachedNewCoordinates = [allNumbers[2], allNumbers[3]]; }
         else if (allNumbers.length >= 2) { coordInput.value = `${allNumbers[0]}, ${allNumbers[1]}`; }
@@ -985,23 +981,47 @@ body {
         const info = document.getElementById('infoTotem');
         if (!id) { info.innerHTML = `<p class="status-message">Ingrese un ID.</p>`; return; }
         
+        // --- BÚSQUEDA HÍBRIDA ---
         let normalizedId = id.startsWith('MC') ? id : 'MC' + id;
-        const data = totemData.find(d => d.ID === normalizedId || d.id === normalizedId);
-        
+        let data = totemData.find(d => d.ID === normalizedId || d.id === normalizedId);
+        let esMiCalle = false;
+
         if (!data) {
-            info.innerHTML = `<p class="status-message" style="color:red;">ID ${id} no encontrado.</p>`;
-            document.getElementById('mapaInfo').classList.remove('visible');
-            actualizarInfoMapa(null, null, null, null, 0); return;
+            data = miCalleData.find(d => (d.IDTOTEM && d.IDTOTEM.toUpperCase() === id) || (d.ID && d.ID.toUpperCase() === id));
+            if (data) { esMiCalle = true; }
         }
         
-        const estatusKey = Object.keys(data).find(k => k.toUpperCase() === 'ESTATUS');
-        if (estatusKey && data[estatusKey] && data[estatusKey].toUpperCase() === 'GABINETE INSTALADO') {
-            const fechaKey = Object.keys(data).find(k => k.toUpperCase().replace(/_/g, ' ') === 'FECHA DE INSTALACION');
-            const fecha = fechaKey ? data[fechaKey] : 'N/A';
-            window.showCustomAlert(`Este tótem (ID: <strong>${id}</strong>) ya fue instalado.<br><br><strong>Fecha de Instalación:</strong> ${fecha}`);
+        if (!data) {
+            info.innerHTML = `<p class="status-message" style="color:red;">ID ${id} no encontrado en ninguna base.</p>`;
+            document.getElementById('mapaInfo').classList.remove('visible');
+            actualizarInfoMapa(null, null, null, null, 0); 
+            return;
+        }
+        
+        // --- DETECCIÓN DE GABINETE INSTALADO ---
+        let mensajeAdvertencia = null; 
+
+        if (!esMiCalle) {
+            const estatusKey = Object.keys(data).find(k => k.toUpperCase() === 'ESTATUS');
+            if (estatusKey && data[estatusKey] && data[estatusKey].toUpperCase() === 'GABINETE INSTALADO') {
+                const fechaKey = Object.keys(data).find(k => k.toUpperCase().replace(/_/g, ' ') === 'FECHA DE INSTALACION');
+                const fecha = fechaKey ? data[fechaKey] : 'N/A';
+                
+                // ESTILO ACTUALIZADO: Título Amarillo y Texto en Recuadro Rojo
+                mensajeAdvertencia = `
+                    <strong style="color:#F3C427; font-size:1.2em;">⚠️ ALERTA DE ESTATUS ⚠️</strong><br><br>
+                    Este tótem ya tiene estatus:<br><br>
+                    <span style="color:#ff4444; font-weight:bold; border:1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1); font-size:1.1em;">
+                        GABINETE INSTALADO
+                    </span><br><br>
+                    <strong>Fecha:</strong> ${fecha}
+                `;
+            }
         }
 
         currentActiveData = data; 
+        currentActiveData.isMiCalleSource = esMiCalle; 
+
         document.getElementById('mapaInfo').classList.add('visible'); 
         mostrarInformacion(data, info); 
         
@@ -1009,7 +1029,7 @@ body {
             if (box) { box.classList.remove('anim-fade-in-data'); void box.offsetWidth; box.classList.add('anim-fade-in-data'); }
         });
         
-        actualizarMapa(data, coordInput.value.trim() || null, 'Coordenadas (Cuadrilla)'); 
+        actualizarMapa(data, coordInput.value.trim() || null, 'Coordenadas (Cuadrilla)', mensajeAdvertencia); 
     };
 
     window.compararCoordenadas = function() {
@@ -1162,18 +1182,25 @@ body {
 
     function actualizarInfoMapa(ubicacion, orig_coords, new_coords, distancia, distanceM, labelTipo = 'Coordenadas (Cuadrilla)') {
         document.getElementById('ubicacion-line').innerHTML = `<p>Ubicación: <strong>${ubicacion||'[NO ENCONTRADA]'}</strong></p>`;
-        document.getElementById('coordenadas-line').innerHTML = `<p><span class="coord-original highlight-text">Coordenadas (Originales):</span> ${orig_coords||'[NO ENCONTRADA]'}</p>`;
+        
+        // --- LÓGICA PARA EL COLOR DE LA PASTILLA ORIGINAL ---
+        let claseColorOriginal = 'coord-original'; // Azul por defecto
+        if (currentActiveData && currentActiveData.isMiCalleSource) {
+            claseColorOriginal = 'coord-micalle'; // Negra si es Mi Calle
+        }
+
+        document.getElementById('coordenadas-line').innerHTML = `<p><span class="${claseColorOriginal} highlight-text">Coordenadas (Originales):</span> ${orig_coords||'[NO ENCONTRADA]'}</p>`;
+        
         const cnLine = document.getElementById('coordenadas-nueva-line');
         const btnHeader = document.getElementById('reubicacion-btn-header');
         
-        // Referencia a la alerta
         const alerta = document.getElementById('alertaDistancia');
         alerta.innerHTML = ''; 
         alerta.style.display='none'; 
 
         let htmlAlertas = '';
 
-        // 1. ZONA PRIORITARIA (Chequeo inmediato, independiente, TIPO PASTILLA)
+        // 1. ZONA PRIORITARIA
         if (currentActiveData) {
             const nivelKey = Object.keys(currentActiveData).find(k => k.toUpperCase() === 'NIVEL');
             if (nivelKey && currentActiveData[nivelKey]) {
@@ -1190,21 +1217,15 @@ body {
             
             const textoEstado = distanceM<=4 ? 'COINCIDE' : 'REUBICACIÓN';
             btnHeader.innerHTML = `<span>${textoEstado}</span><span>${distancia}</span>`;
-            
             btnHeader.style.display = 'inline-flex'; 
             
-            // APLICAR GRADIENTES AL BOTÓN DEL ENCABEZADO
             if (distanceM <= 4) {
-                // Verde
                 btnHeader.style.background = 'linear-gradient(135deg, #28a745 0%, #1e7e34 100%)';
             } else {
-                // Rojo (usando el mismo que la alerta de distancia)
                 btnHeader.style.background = 'linear-gradient(135deg, #e53935 0%, #b71c1c 100%)';
             }
-            // Limpiar background-color sólido por si acaso
             btnHeader.style.backgroundColor = '';
             
-            // 2. DISTANCIA (TIPO PASTILLA)
             if (distanceM > 80 && distanceM > 4) { 
                 htmlAlertas += '<span class="alert-pill alert-distance-pill">☠️ Distancia excede 80 metros ☠️</span>';
             }
@@ -1214,7 +1235,6 @@ body {
             btnHeader.style.display = 'none'; 
         }
 
-        // Renderizar si hay alertas
         if (htmlAlertas !== '') {
             alerta.innerHTML = htmlAlertas;
             alerta.style.display = 'flex';
@@ -1222,7 +1242,10 @@ body {
     }
 
     function mostrarInformacion(data, cont) {
-        let html = ''; const excl = ['LATITUD','LONGITUD','latitud','longitud','Latitude','Longitude'];
+        let html = ''; 
+        // AGREGADO 'isMiCalleSource' A LA LISTA DE EXCLUSIÓN
+        const excl = ['LATITUD','LONGITUD','latitud','longitud','Latitude','Longitude', 'isMiCalleSource'];
+        
         for (const k in data) {
             if (excl.includes(k)) continue; 
             let val = String(data[k]);
@@ -1235,38 +1258,51 @@ body {
         cont.innerHTML = html;
     }
 
-    function actualizarMapa(d, coordsStr, customLabel = 'Coordenadas (Cuadrilla)') {
-        // 1. Limpieza previa
-        if (blackMarkers.length > 0) {
-            blackMarkers.forEach(bm => map.removeLayer(bm));
-            blackMarkers = [];
-        }
+    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
+    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
+    function actualizarMapa(d, coordsStr, customLabel = 'Coordenadas (Cuadrilla)', advertenciaPrevia = null) {
+        if (blackMarkers.length > 0) { blackMarkers.forEach(bm => map.removeLayer(bm)); blackMarkers = []; }
         if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
 
-        const lat = parseFloat(d.LATITUD||d.latitud); const lon = parseFloat(d.LONGITUD||d.longitud);
+        const esBaseMiCalle = d.isMiCalleSource === true;
+        const lat = parseFloat(d.LATITUD || d.latitud || d.Latitud); 
+        const lon = parseFloat(d.LONGITUD || d.longitud || d.Longitud);
+
         if (isNaN(lat) || isNaN(lon)) { actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, "N/A", null, null, 0); return; }
         
         const origStr = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
         let distDisplay="0 m", distM=0;
-        
         let checkLat = lat;
         let checkLon = lon;
-        let puntoReferenciaNombre = "Ubicación Original"; 
+        // Cambio de texto aquí también por coherencia
+        let puntoReferenciaNombre = esBaseMiCalle ? "Tótem Mi Calle" : "Ubicación Original (Mis Ojos)"; 
 
-        // Pin Original
+        // Pin Central
         if (!markerOriginal) {
-            const icon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-            markerOriginal = L.marker([lat, lon], { icon: icon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:#007bff; font-weight:bold;">UBICACIÓN ORIGINAL</span><br>${origStr}`).openPopup();
+            let mainIcon;
+            if (esBaseMiCalle) {
+                mainIcon = blackIcon; 
+            } else {
+                mainIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+            }
+
+            const idDisplay = d.ID || d.IDTOTEM || d.id;
+            
+            // Si es Mi Calle (negro), usamos color Naranja (#e67e22) para el texto
+            const colorTitulo = esBaseMiCalle ? '#e67e22' : '#007bff';
+
+            markerOriginal = L.marker([lat, lon], { icon: mainIcon }).addTo(map)
+                .bindPopup(`<strong>${idDisplay}</strong><br><span style="color:${colorTitulo}; font-weight:bold;">${puntoReferenciaNombre}</span><br>${origStr}`)
+                .openPopup();
             map.setView([lat, lon], 16);
         }
         
-        // Pin Propuesta
+        // Propuesta
         if (coordsStr) {
             const parts = coordsStr.match(/-?\d+(\.\d+)?/g);
             if (parts && parts.length === 2) {
                 const nLat = parseFloat(parts[0]); const nLon = parseFloat(parts[1]);
-                checkLat = nLat;
-                checkLon = nLon;
+                checkLat = nLat; checkLon = nLon;
                 puntoReferenciaNombre = "Propuesta (Cuadrilla)";
 
                 const distKm = getDistance(lat, lon, nLat, nLon); distM = distKm*1000;
@@ -1278,70 +1314,87 @@ body {
 
                 const nIcon = new L.Icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
                 
-                markerNew = L.marker([nLat, nLon], { icon: nIcon }).addTo(map).bindPopup(`<strong>${d.ID||d.id}</strong><br><span style="color:${colorStyle}; font-weight:bold;">${labelStatus}</span><br>${nLat.toFixed(6)}, ${nLon.toFixed(6)}`).openPopup();
+                markerNew = L.marker([nLat, nLon], { icon: nIcon }).addTo(map).bindPopup(`<strong>Reubicación</strong><br><span style="color:${colorStyle}; font-weight:bold;">${labelStatus}</span><br>${nLat.toFixed(6)}, ${nLon.toFixed(6)}`).openPopup();
                 polyline = L.polyline([[lat, lon], [nLat, nLon]], {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
                 map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50], maxZoom: 16 });
             }
         }
 
-        // --- LÓGICA DE DETECCIÓN (RANGO 100 METROS) ---
-        if (miCalleData.length > 0) {
-            const RANGO_METROS = 100;
-            console.log(`🔍 Buscando conflictos (Radio ${RANGO_METROS}m)`);
-            
-            miCalleData.forEach(item => {
-                const mcLat = parseFloat(item.LATITUD || item.Latitud || item.latitud || item.latitude || 0);
-                const mcLon = parseFloat(item.LONGITUD || item.Longitud || item.longitud || item.longitude || 0);
+        // --- BÚSQUEDA DE CONFLICTOS ---
+        const RANGO_METROS = 150; // <--- ACTUALIZADO A 150 METROS
+        let encontrados = 0;
 
-                if (mcLat !== 0 && mcLon !== 0) {
-                    const distConflicto = getDistance(checkLat, checkLon, mcLat, mcLon) * 1000; 
-                    
-                    if (distConflicto <= RANGO_METROS) {
-                        const bm = L.marker([mcLat, mcLon], { icon: blackIcon }).addTo(map);
-                        
-                        // --- POPUP ACTUALIZADO (CON LAT/LON) ---
-                        bm.bindPopup(`
-                            <div style="font-family: 'Roboto Mono', monospace; font-size: 0.9em;">
-                                <strong>ID:</strong> ${item.IDTOTEM || item.ID || 'S/N'}<br>
-                                <strong>PROYECTO:</strong> ${item.PROYECTO || 'Mi Calle'}<br>
-                                <hr style="margin: 4px 0; border: 0; border-top: 1px solid #ccc;">
-                                <strong>Lat:</strong> ${mcLat.toFixed(6)}<br>
-                                <strong>Lon:</strong> ${mcLon.toFixed(6)}<br>
-                                <hr style="margin: 4px 0; border: 0; border-top: 1px solid #ccc;">
-                                Distancia a ${puntoReferenciaNombre}:<br>
-                                <strong style="font-size:1.1em; color:#e67e22;">${distConflicto.toFixed(2)} metros</strong>
-                            </div>
-                        `);
-
-                        // Evento Clic para medir
-                        bm.on('click', () => {
-                            if (measureLine) map.removeLayer(measureLine);
-                            measureLine = L.polyline([[checkLat, checkLon], [mcLat, mcLon]], {
-                                color: 'orange',
-                                dashArray: '10, 10', 
-                                weight: 3,
-                                opacity: 0.8
-                            }).addTo(map);
-                        });
-                        
-                        blackMarkers.push(bm);
+        if (esBaseMiCalle) {
+            // Buscamos "MIS OJOS" (Originales) cerca de "MI CALLE"
+            if (totemData.length > 0) {
+                const blueIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+                totemData.forEach(item => {
+                    const tLat = parseFloat(item.LATITUD || item.latitud); const tLon = parseFloat(item.LONGITUD || item.longitud);
+                    if (!isNaN(tLat) && !isNaN(tLon)) {
+                        const dist = getDistance(checkLat, checkLon, tLat, tLon) * 1000;
+                        if (dist <= RANGO_METROS) {
+                            const bm = L.marker([tLat, tLon], { icon: blueIcon }).addTo(map);
+                            // TEXTO ACTUALIZADO: Dice "MIS OJOS" en vez de "BASE ORIGINAL"
+                            bm.bindPopup(`<div style="font-family:'Roboto Mono',monospace;font-size:0.9em;"><strong>ID ORIGINAL:</strong> ${item.ID||item.id}<br><span style="color:#007bff;font-weight:bold;">MIS OJOS</span><br><hr style="margin:4px 0;">Distancia:<strong style="font-size:1.1em;color:#007bff;">${dist.toFixed(2)} m</strong></div>`);
+                            bm.on('click', () => { if (measureLine) map.removeLayer(measureLine); measureLine = L.polyline([[checkLat, checkLon], [tLat, tLon]], { color: '#007bff', dashArray: '10, 10', weight: 3, opacity: 0.8 }).addTo(map); });
+                            blackMarkers.push(bm); encontrados++;
+                        }
                     }
-                }
-            });
-
-            if (blackMarkers.length > 0) {
-                // --- ALERTA VISUAL NUEVA ---
-                // Usamos el icono '🛑' para indicar prohibición
-                window.showCustomAlert(
-                    `<strong>CRUCE DE PROYECTOS DETECTADO</strong><br><br>
-                     Se encontraron <strong>${blackMarkers.length}</strong> tótems de "Mi Calle" en un radio de 100m.<br><br>
-                     <span style="color:#ff4444; font-size:1.1em; font-weight:bold; border: 1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1);">
-                        NO SE PUEDE INSTALAR CERCA DE OTROS PROYECTOS
-                     </span><br><br>
-                     <span style="font-size:0.8em; color:#ccc;">Haz clic en los pines negros para ver la distancia exacta.</span>`,
-                    "🛑" 
-                );
+                });
             }
+        } else {
+            // Buscamos "MI CALLE" cerca de "MIS OJOS"
+            if (miCalleData.length > 0) {
+                miCalleData.forEach(item => {
+                    const mcLat = parseFloat(item.LATITUD || item.Latitud || item.latitud); const mcLon = parseFloat(item.LONGITUD || item.Longitud || item.longitud);
+                    if (!isNaN(mcLat) && !isNaN(mcLon)) {
+                        const dist = getDistance(checkLat, checkLon, mcLat, mcLon) * 1000;
+                        if (dist <= RANGO_METROS) {
+                            const bm = L.marker([mcLat, mcLon], { icon: blackIcon }).addTo(map);
+                            bm.bindPopup(`<div style="font-family:'Roboto Mono',monospace;font-size:0.9em;"><strong>ID MI CALLE:</strong> ${item.IDTOTEM||item.ID||'S/N'}<br><span style="color:#e67e22;font-weight:bold;">PROYECTO MI CALLE</span><br><hr style="margin:4px 0;">Distancia:<strong style="font-size:1.1em;color:#e67e22;">${dist.toFixed(2)} m</strong></div>`);
+                            bm.on('click', () => { if (measureLine) map.removeLayer(measureLine); measureLine = L.polyline([[checkLat, checkLon], [mcLat, mcLon]], { color: 'orange', dashArray: '10, 10', weight: 3, opacity: 0.8 }).addTo(map); });
+                            blackMarkers.push(bm); encontrados++;
+                        }
+                    }
+                });
+            }
+        }
+
+        // --- GESTIÓN INTELIGENTE DE ALERTAS ---
+        let msgFinal = "";
+        let iconoFinal = "⚠️";
+
+        // 1. Conflictos
+        if (encontrados > 0) {
+            iconoFinal = "🛑";
+            if (esBaseMiCalle) {
+                // TEXTO ACTUALIZADO: Dice "del proyecto MIS OJOS"
+                msgFinal += `
+                    <strong style="color:#F3C427; font-size:1.2em;">REFERENCIA CRUZADA</strong><br><br>
+                    Viendo tótem "Mi Calle".<br>
+                    Se encontraron <strong>${encontrados}</strong> tótems del proyecto MIS OJOS cerca.<br>
+                `;
+            } else {
+                msgFinal += `
+                    <strong style="color:#F3C427; font-size:1.2em;">⚠️ CRUCE DE PROYECTOS ⚠️</strong><br><br>
+                    Se encontraron <strong>${encontrados}</strong> tótems de "Mi Calle" en radio de ${RANGO_METROS}m.<br><br>
+                    <span style="color:#ff4444; font-weight:bold; border:1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1); font-size:1.1em;">
+                        NO SE PUEDEN JUNTAR
+                    </span><br>
+                `;
+            }
+        }
+
+        // 2. Advertencia Previa
+        if (advertenciaPrevia) {
+            if (msgFinal !== "") {
+                msgFinal += `<hr style="margin: 15px 0; border: 0; border-top: 1px dashed #666;">`;
+            }
+            msgFinal += advertenciaPrevia;
+        }
+
+        if (msgFinal !== "") {
+            window.showCustomAlert(msgFinal, iconoFinal);
         }
 
         actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM, customLabel);

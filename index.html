@@ -528,6 +528,34 @@ body {
     #coordInput, #compararBtn { width: 100%; padding: 10px; box-sizing: border-box; }
 }
 
+/* --- ANIMACIÓN DE PELIGRO (Parpadeo Rojo) --- */
+/* --- ANIMACIÓN DE PELIGRO (INTENSIDAD AUMENTADA) --- */
+@keyframes pulse-danger {
+    0% { filter: drop-shadow(0 0 0 rgba(255, 0, 0, 0)); }
+    50% { 
+        /* Doble sombra para mayor intensidad */
+        filter: drop-shadow(0 0 20px rgba(255, 0, 0, 1)) drop-shadow(0 0 10px rgba(255, 50, 50, 0.8)); 
+    }
+    100% { filter: drop-shadow(0 0 0 rgba(255, 0, 0, 0)); }
+}
+
+.marker-blink-danger {
+    animation: pulse-danger 0.8s infinite; /* Un poco más rápido */
+}
+
+/* --- CORRECCIÓN RESPONSIVA PARA LA ALERTA PERSONALIZADA --- */
+@media (max-width: 700px) {
+    .custom-alert-box {
+        width: 90% !important;
+        max-width: 90% !important;
+        padding: 20px 15px !important;
+        transform: scale(1) !important; /* Quitar el scale que la hacía pequeña */
+    }
+    .custom-alert-box h2 { font-size: 1.5em !important; margin-top: 5px !important; }
+    .custom-alert-box p { font-size: 1em !important; line-height: 1.4 !important; }
+    .custom-alert-icon { font-size: 3em !important; }
+}
+
 </style>
 </head>
 <body>
@@ -1260,6 +1288,8 @@ body {
 
     // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
     // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
+    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
+    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
     function actualizarMapa(d, coordsStr, customLabel = 'Coordenadas (Cuadrilla)', advertenciaPrevia = null) {
         if (blackMarkers.length > 0) { blackMarkers.forEach(bm => map.removeLayer(bm)); blackMarkers = []; }
         if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
@@ -1274,21 +1304,25 @@ body {
         let distDisplay="0 m", distM=0;
         let checkLat = lat;
         let checkLon = lon;
-        // Cambio de texto aquí también por coherencia
-        let puntoReferenciaNombre = esBaseMiCalle ? "Tótem Mi Calle" : "Ubicación Original (Mis Ojos)"; 
+        let puntoReferenciaNombre = esBaseMiCalle ? "Tótem Mi Calle" : "Ubicación Original"; 
+
+        // --- DEFINICIÓN DE ICONOS ---
+        const iconNormal = blackIcon;
+        // Icono Negro con Parpadeo Rojo INTENSO
+        const iconPeligro = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
+            className: 'marker-blink-danger' 
+        });
 
         // Pin Central
         if (!markerOriginal) {
             let mainIcon;
-            if (esBaseMiCalle) {
-                mainIcon = blackIcon; 
-            } else {
-                mainIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-            }
+            if (esBaseMiCalle) { mainIcon = blackIcon; } 
+            else { mainIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }); }
 
             const idDisplay = d.ID || d.IDTOTEM || d.id;
-            
-            // Si es Mi Calle (negro), usamos color Naranja (#e67e22) para el texto
             const colorTitulo = esBaseMiCalle ? '#e67e22' : '#007bff';
 
             markerOriginal = L.marker([lat, lon], { icon: mainIcon }).addTo(map)
@@ -1321,23 +1355,38 @@ body {
         }
 
         // --- BÚSQUEDA DE CONFLICTOS ---
-        const RANGO_METROS = 150; // <--- ACTUALIZADO A 150 METROS
-        let encontrados = 0;
+        const RANGO_VISUAL = 150; 
+        const RANGO_ALERTA = 70;  // <--- ACTUALIZADO A 70 METROS
+        
+        let encontradosTotal = 0;
+        let encontradosPeligro = 0; 
+        let distanciaMasCercana = 9999; // Para guardar la distancia mínima
 
         if (esBaseMiCalle) {
-            // Buscamos "MIS OJOS" (Originales) cerca de "MI CALLE"
+            // Buscamos "MIS OJOS" cerca de "MI CALLE"
             if (totemData.length > 0) {
                 const blueIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+                const blueIconDanger = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41], className: 'marker-blink-danger' });
+
                 totemData.forEach(item => {
                     const tLat = parseFloat(item.LATITUD || item.latitud); const tLon = parseFloat(item.LONGITUD || item.longitud);
                     if (!isNaN(tLat) && !isNaN(tLon)) {
                         const dist = getDistance(checkLat, checkLon, tLat, tLon) * 1000;
-                        if (dist <= RANGO_METROS) {
-                            const bm = L.marker([tLat, tLon], { icon: blueIcon }).addTo(map);
-                            // TEXTO ACTUALIZADO: Dice "MIS OJOS" en vez de "BASE ORIGINAL"
+                        
+                        if (dist <= RANGO_VISUAL) {
+                            const esPeligro = dist <= RANGO_ALERTA;
+                            const iconoUsar = esPeligro ? blueIconDanger : blueIcon;
+                            
+                            if (esPeligro) {
+                                encontradosPeligro++;
+                                if (dist < distanciaMasCercana) distanciaMasCercana = dist; // Guardamos la más cercana
+                            }
+
+                            const bm = L.marker([tLat, tLon], { icon: iconoUsar }).addTo(map);
+                            // POPUP LIMPIO (Sin zona prohibida)
                             bm.bindPopup(`<div style="font-family:'Roboto Mono',monospace;font-size:0.9em;"><strong>ID ORIGINAL:</strong> ${item.ID||item.id}<br><span style="color:#007bff;font-weight:bold;">MIS OJOS</span><br><hr style="margin:4px 0;">Distancia:<strong style="font-size:1.1em;color:#007bff;">${dist.toFixed(2)} m</strong></div>`);
                             bm.on('click', () => { if (measureLine) map.removeLayer(measureLine); measureLine = L.polyline([[checkLat, checkLon], [tLat, tLon]], { color: '#007bff', dashArray: '10, 10', weight: 3, opacity: 0.8 }).addTo(map); });
-                            blackMarkers.push(bm); encontrados++;
+                            blackMarkers.push(bm); encontradosTotal++;
                         }
                     }
                 });
@@ -1349,11 +1398,21 @@ body {
                     const mcLat = parseFloat(item.LATITUD || item.Latitud || item.latitud); const mcLon = parseFloat(item.LONGITUD || item.Longitud || item.longitud);
                     if (!isNaN(mcLat) && !isNaN(mcLon)) {
                         const dist = getDistance(checkLat, checkLon, mcLat, mcLon) * 1000;
-                        if (dist <= RANGO_METROS) {
-                            const bm = L.marker([mcLat, mcLon], { icon: blackIcon }).addTo(map);
+                        
+                        if (dist <= RANGO_VISUAL) {
+                            const esPeligro = dist <= RANGO_ALERTA;
+                            const iconoUsar = esPeligro ? iconPeligro : iconNormal;
+                            
+                            if (esPeligro) {
+                                encontradosPeligro++;
+                                if (dist < distanciaMasCercana) distanciaMasCercana = dist; // Guardamos la más cercana
+                            }
+
+                            const bm = L.marker([mcLat, mcLon], { icon: iconoUsar }).addTo(map);
+                            // POPUP LIMPIO (Sin zona prohibida)
                             bm.bindPopup(`<div style="font-family:'Roboto Mono',monospace;font-size:0.9em;"><strong>ID MI CALLE:</strong> ${item.IDTOTEM||item.ID||'S/N'}<br><span style="color:#e67e22;font-weight:bold;">PROYECTO MI CALLE</span><br><hr style="margin:4px 0;">Distancia:<strong style="font-size:1.1em;color:#e67e22;">${dist.toFixed(2)} m</strong></div>`);
                             bm.on('click', () => { if (measureLine) map.removeLayer(measureLine); measureLine = L.polyline([[checkLat, checkLon], [mcLat, mcLon]], { color: 'orange', dashArray: '10, 10', weight: 3, opacity: 0.8 }).addTo(map); });
-                            blackMarkers.push(bm); encontrados++;
+                            blackMarkers.push(bm); encontradosTotal++;
                         }
                     }
                 });
@@ -1364,26 +1423,32 @@ body {
         let msgFinal = "";
         let iconoFinal = "⚠️";
 
-        // 1. Conflictos
-        if (encontrados > 0) {
+        // 1. Conflictos (SOLO SI HAY PELIGRO REAL < 70m)
+        if (encontradosPeligro > 0) {
             iconoFinal = "🛑";
+            
+            // Texto de distancia dinámico
+            const textoDistancia = encontradosPeligro === 1 
+                ? `a <strong>${distanciaMasCercana.toFixed(2)} metros</strong>` 
+                : `a menos de ${RANGO_ALERTA} metros`;
+
             if (esBaseMiCalle) {
-                // TEXTO ACTUALIZADO: Dice "del proyecto MIS OJOS"
                 msgFinal += `
                     <strong style="color:#F3C427; font-size:1.2em;">REFERENCIA CRUZADA</strong><br><br>
                     Viendo tótem "Mi Calle".<br>
-                    Se encontraron <strong>${encontrados}</strong> tótems del proyecto MIS OJOS cerca.<br>
+                    Se encontraron <strong>${encontradosPeligro}</strong> tótems del proyecto MIS OJOS ${textoDistancia}.<br>
                 `;
             } else {
+                // TEXTO EXACTO SOLICITADO
                 msgFinal += `
                     <strong style="color:#F3C427; font-size:1.2em;">⚠️ CRUCE DE PROYECTOS ⚠️</strong><br><br>
-                    Se encontraron <strong>${encontrados}</strong> tótems de "Mi Calle" en radio de ${RANGO_METROS}m.<br><br>
+                    Se encontraron <strong>${encontradosPeligro}</strong> tótems del proyecto "Mi Calle" ${textoDistancia}.<br><br>
                     <span style="color:#ff4444; font-weight:bold; border:1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1); font-size:1.1em;">
                         NO SE PUEDEN JUNTAR
                     </span><br>
                 `;
             }
-        }
+        } 
 
         // 2. Advertencia Previa
         if (advertenciaPrevia) {
@@ -1399,6 +1464,7 @@ body {
 
         actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM, customLabel);
         setTimeout(() => map.invalidateSize(), 100); 
+     
     }
 </script>
 </body>

@@ -391,22 +391,32 @@ body {
 .coord-coincide { background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); }
 .coord-micalle { background: linear-gradient(135deg, #1e1e1e 0%, #444 100%); border: 1px solid #666; }
 
-/* --- POPUP --- */
+/* --- POPUP TAMAÑO AJUSTADO (UN NÚMERO MENOS) --- */
 .leaflet-popup-content-wrapper { 
     background-color: var(--bg-popup) !important; 
     color: var(--text-light) !important; 
     box-shadow: 0 3px 14px rgba(0,0,0,0.8); 
     border-radius: 6px;
-    width: fit-content !important; 
-    min-width: unset !important;
+    padding: 1px; 
+    width: auto !important;
 }
-.leaflet-popup-tip { background-color: var(--bg-popup) !important; }
+
 .leaflet-popup-content { 
-    font-size: 0.95em; font-family: var(--font-main); 
-    width: max-content !important; max-width: 250px !important;
-    white-space: normal; margin: 12px 28px 12px 12px !important; line-height: 1.4;
+    /* BAJAMOS DE 0.95em A 0.85em */
+    font-size: 0.85em !important; 
+    font-family: var(--font-main); 
+    
+    width: max-content !important; 
+    max-width: 250px !important;
+    
+    white-space: normal; 
+    margin: 12px 28px 12px 12px !important; 
+    line-height: 1.4;
+    text-align: left;
 }
+
 .leaflet-popup-content strong { color: var(--text-light); font-weight: bold; }
+
 
 @keyframes flash-highlight { from { background: var(--accent-yellow-vibrant); color: #1e1e1e; transform: scale(1.02); border-color: var(--accent-yellow-vibrant); } to { background: rgba(0,0,0,0.2); color: var(--text-light); transform: scale(1); border-color: var(--border-color); } }
 .flash-on-paste { animation: flash-highlight 0.6s ease-out 1; }
@@ -554,6 +564,48 @@ body {
     .custom-alert-box h2 { font-size: 1.5em !important; margin-top: 5px !important; }
     .custom-alert-box p { font-size: 1em !important; line-height: 1.4 !important; }
     .custom-alert-icon { font-size: 3em !important; }
+}
+
+/* --- ESTILO PARA MINI ETIQUETAS (TOOLTIPS) --- */
+/* --- ESTILO PARA MINI ETIQUETAS (TOOLTIPS) --- */
+.custom-tooltip-label {
+    /* Base: Letra MUY pequeña y pegada */
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.55rem !important; /* <--- AJUSTADO: MÁS PEQUEÑO */
+    font-weight: 700;
+    color: #fff !important;
+    border-radius: 4px;
+    padding: 1px 5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1;
+}
+
+/* Colores Específicos */
+.tooltip-blue { 
+    background: rgba(0, 123, 255, 0.9) !important; 
+    border: 1px solid #80bdff !important; 
+}
+.tooltip-red { 
+    background: rgba(220, 53, 69, 0.9) !important; 
+    border: 1px solid #ff8787 !important; 
+}
+.tooltip-green { 
+    background: rgba(40, 167, 69, 0.9) !important; 
+    border: 1px solid #85e085 !important; 
+}
+.tooltip-black { 
+    background: rgba(20, 20, 20, 0.95) !important; 
+    /* <--- AJUSTADO: YA NO ES NARANJA, AHORA ES GRIS SUTIL */
+    border: 1px solid #666 !important; 
+}
+
+/* Quitar flechas por defecto */
+.leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, 
+.leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
+    display: none !important;
 }
 
 </style>
@@ -1287,9 +1339,6 @@ body {
     }
 
     // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
-    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
-    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
-    // AHORA ACEPTA UN 4to ARGUMENTO: advertenciaPrevia
     function actualizarMapa(d, coordsStr, customLabel = 'Coordenadas (Cuadrilla)', advertenciaPrevia = null) {
         if (blackMarkers.length > 0) { blackMarkers.forEach(bm => map.removeLayer(bm)); blackMarkers = []; }
         if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
@@ -1304,11 +1353,10 @@ body {
         let distDisplay="0 m", distM=0;
         let checkLat = lat;
         let checkLon = lon;
-        let puntoReferenciaNombre = esBaseMiCalle ? "Tótem Mi Calle" : "Ubicación Original"; 
+        let puntoReferenciaNombre = esBaseMiCalle ? "Tótem Mi Calle" : "Ubicación Original (Mis Ojos)"; 
 
         // --- DEFINICIÓN DE ICONOS ---
         const iconNormal = blackIcon;
-        // Icono Negro con Parpadeo Rojo INTENSO
         const iconPeligro = new L.Icon({
             iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png',
             shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -1316,22 +1364,42 @@ body {
             className: 'marker-blink-danger' 
         });
 
-        // Pin Central
+        // --- HELPER PARA ETIQUETAS ---
+        function bindSmartLabel(marker, text, colorClass) {
+            marker.bindTooltip(text, { 
+                permanent: true, direction: 'top', className: `custom-tooltip-label ${colorClass}`, offset: [0, -38] 
+            });
+            marker.on('popupopen', () => marker.closeTooltip());
+            marker.on('popupclose', () => { if(map.hasLayer(marker)) marker.openTooltip(); });
+        }
+
+        // 1. PIN CENTRAL
         if (!markerOriginal) {
             let mainIcon;
-            if (esBaseMiCalle) { mainIcon = blackIcon; } 
-            else { mainIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }); }
+            let labelText; 
+            let labelColor;
+
+            if (esBaseMiCalle) { 
+                mainIcon = blackIcon; 
+                labelText = "Mi Calle";
+                labelColor = "tooltip-black";
+            } else { 
+                mainIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] }); 
+                labelText = "Original";
+                labelColor = "tooltip-blue";
+            }
 
             const idDisplay = d.ID || d.IDTOTEM || d.id;
             const colorTitulo = esBaseMiCalle ? '#e67e22' : '#007bff';
 
             markerOriginal = L.marker([lat, lon], { icon: mainIcon }).addTo(map)
-                .bindPopup(`<strong>${idDisplay}</strong><br><span style="color:${colorTitulo}; font-weight:bold;">${puntoReferenciaNombre}</span><br>${origStr}`)
-                .openPopup();
+                .bindPopup(`<strong>${idDisplay}</strong><br><span style="color:${colorTitulo}; font-weight:bold;">${puntoReferenciaNombre}</span><br>${origStr}`);
+            
+            bindSmartLabel(markerOriginal, labelText, labelColor);
             map.setView([lat, lon], 16);
         }
         
-        // Propuesta
+        // 2. PIN PROPUESTA
         if (coordsStr) {
             const parts = coordsStr.match(/-?\d+(\.\d+)?/g);
             if (parts && parts.length === 2) {
@@ -1342,13 +1410,23 @@ body {
                 const distKm = getDistance(lat, lon, nLat, nLon); distM = distKm*1000;
                 distDisplay = distKm < 1 ? `${distM.toFixed(2)} m` : `${distKm.toFixed(2)} km`;
 
-                let color = distM<=4 ? 'green' : 'red';
+                let colorPin, labelText, labelColorClass;
+                if (distM <= 4) {
+                    colorPin = 'green'; labelText = 'Cuadrilla'; labelColorClass = 'tooltip-green';
+                } else {
+                    colorPin = 'red'; labelText = 'Propuesta'; labelColorClass = 'tooltip-red';
+                }
+
                 const labelStatus = distM<=4 ? 'UBICACIÓN COINCIDE' : 'UBICACIÓN PROPUESTA';
                 const colorStyle = distM<=4 ? '#28a745' : '#FF0000';
 
-                const nIcon = new L.Icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+                const nIcon = new L.Icon({ iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${colorPin}.png`, shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
                 
-                markerNew = L.marker([nLat, nLon], { icon: nIcon }).addTo(map).bindPopup(`<strong>Reubicación</strong><br><span style="color:${colorStyle}; font-weight:bold;">${labelStatus}</span><br>${nLat.toFixed(6)}, ${nLon.toFixed(6)}`).openPopup();
+                markerNew = L.marker([nLat, nLon], { icon: nIcon }).addTo(map)
+                    .bindPopup(`<span style="color:${colorStyle}; font-weight:bold;">${labelStatus}</span><br>${nLat.toFixed(6)}, ${nLon.toFixed(6)}`);
+                
+                bindSmartLabel(markerNew, labelText, labelColorClass);
+
                 polyline = L.polyline([[lat, lon], [nLat, nLon]], {color: 'red', weight: 4, opacity: 0.7}).addTo(map);
                 map.fitBounds([[lat, lon], [nLat, nLon]], { padding: [50, 50], maxZoom: 16 });
             }
@@ -1356,115 +1434,98 @@ body {
 
         // --- BÚSQUEDA DE CONFLICTOS ---
         const RANGO_VISUAL = 150; 
-        const RANGO_ALERTA = 70;  // <--- ACTUALIZADO A 70 METROS
+        const RANGO_ALERTA = 55;  
         
         let encontradosTotal = 0;
         let encontradosPeligro = 0; 
-        let distanciaMasCercana = 9999; // Para guardar la distancia mínima
+        let distanciaMasCercana = 9999; 
+
+        const procesarVecino = (latV, lonV, item, tipo) => {
+            const dist = getDistance(checkLat, checkLon, latV, lonV) * 1000;
+            if (dist <= RANGO_VISUAL) {
+                const esPeligro = dist <= RANGO_ALERTA;
+                
+                let iconoUsar, labelText, labelColor, popupContent;
+
+                if (tipo === 'MICALLE') {
+                    iconoUsar = esPeligro ? iconPeligro : iconNormal;
+                    labelText = "Mi Calle";
+                    labelColor = "tooltip-black";
+                    popupContent = `<strong>ID MI CALLE: ${item.IDTOTEM||item.ID||'S/N'}</strong><br><span style="color:#e67e22;font-weight:bold;">PROYECTO MI CALLE</span><br>Distancia: <strong style="color:#e67e22;">${dist.toFixed(2)} m</strong>`;
+                } else {
+                    const blueNormal = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
+                    const blueDanger = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41], className: 'marker-blink-danger' });
+                    
+                    iconoUsar = esPeligro ? blueDanger : blueNormal;
+                    labelText = "Original";
+                    labelColor = "tooltip-blue";
+                    popupContent = `<strong>ID ORIGINAL: ${item.ID||item.id}</strong><br><span style="color:#007bff;font-weight:bold;">MIS OJOS</span><br>Distancia: <strong style="color:#007bff;">${dist.toFixed(2)} m</strong>`;
+                }
+
+                if (esPeligro) {
+                    encontradosPeligro++;
+                    if (dist < distanciaMasCercana) distanciaMasCercana = dist;
+                }
+
+                const bm = L.marker([latV, lonV], { icon: iconoUsar }).addTo(map);
+                bm.bindPopup(popupContent);
+                bindSmartLabel(bm, labelText, labelColor);
+
+                // --- CAMBIO AQUÍ: COLOR 'purple' (Morado) ---
+                bm.on('click', () => { 
+                    if (measureLine) map.removeLayer(measureLine); 
+                    measureLine = L.polyline([[checkLat, checkLon], [latV, lonV]], { 
+                        color: 'black', // <--- CAMBIADO A MORADO
+                        dashArray: '10, 10', 
+                        weight: 3, 
+                        opacity: 0.8 
+                    }).addTo(map); 
+                });
+                
+                blackMarkers.push(bm); encontradosTotal++;
+            }
+        };
 
         if (esBaseMiCalle) {
-            // Buscamos "MIS OJOS" cerca de "MI CALLE"
             if (totemData.length > 0) {
-                const blueIcon = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41] });
-                const blueIconDanger = new L.Icon({ iconUrl: 'https://unpkg.com/leaflet/dist/images/marker-icon.png', shadowUrl: 'https://unpkg.com/leaflet/dist/images/marker-shadow.png', iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41], className: 'marker-blink-danger' });
-
                 totemData.forEach(item => {
                     const tLat = parseFloat(item.LATITUD || item.latitud); const tLon = parseFloat(item.LONGITUD || item.longitud);
-                    if (!isNaN(tLat) && !isNaN(tLon)) {
-                        const dist = getDistance(checkLat, checkLon, tLat, tLon) * 1000;
-                        
-                        if (dist <= RANGO_VISUAL) {
-                            const esPeligro = dist <= RANGO_ALERTA;
-                            const iconoUsar = esPeligro ? blueIconDanger : blueIcon;
-                            
-                            if (esPeligro) {
-                                encontradosPeligro++;
-                                if (dist < distanciaMasCercana) distanciaMasCercana = dist; // Guardamos la más cercana
-                            }
-
-                            const bm = L.marker([tLat, tLon], { icon: iconoUsar }).addTo(map);
-                            // POPUP LIMPIO (Sin zona prohibida)
-                            bm.bindPopup(`<div style="font-family:'Roboto Mono',monospace;font-size:0.9em;"><strong>ID ORIGINAL:</strong> ${item.ID||item.id}<br><span style="color:#007bff;font-weight:bold;">MIS OJOS</span><br><hr style="margin:4px 0;">Distancia:<strong style="font-size:1.1em;color:#007bff;">${dist.toFixed(2)} m</strong></div>`);
-                            bm.on('click', () => { if (measureLine) map.removeLayer(measureLine); measureLine = L.polyline([[checkLat, checkLon], [tLat, tLon]], { color: '#007bff', dashArray: '10, 10', weight: 3, opacity: 0.8 }).addTo(map); });
-                            blackMarkers.push(bm); encontradosTotal++;
-                        }
-                    }
+                    if (!isNaN(tLat) && !isNaN(tLon)) procesarVecino(tLat, tLon, item, 'ORIGINAL');
                 });
             }
         } else {
-            // Buscamos "MI CALLE" cerca de "MIS OJOS"
             if (miCalleData.length > 0) {
                 miCalleData.forEach(item => {
                     const mcLat = parseFloat(item.LATITUD || item.Latitud || item.latitud); const mcLon = parseFloat(item.LONGITUD || item.Longitud || item.longitud);
-                    if (!isNaN(mcLat) && !isNaN(mcLon)) {
-                        const dist = getDistance(checkLat, checkLon, mcLat, mcLon) * 1000;
-                        
-                        if (dist <= RANGO_VISUAL) {
-                            const esPeligro = dist <= RANGO_ALERTA;
-                            const iconoUsar = esPeligro ? iconPeligro : iconNormal;
-                            
-                            if (esPeligro) {
-                                encontradosPeligro++;
-                                if (dist < distanciaMasCercana) distanciaMasCercana = dist; // Guardamos la más cercana
-                            }
-
-                            const bm = L.marker([mcLat, mcLon], { icon: iconoUsar }).addTo(map);
-                            // POPUP LIMPIO (Sin zona prohibida)
-                            bm.bindPopup(`<div style="font-family:'Roboto Mono',monospace;font-size:0.9em;"><strong>ID MI CALLE:</strong> ${item.IDTOTEM||item.ID||'S/N'}<br><span style="color:#e67e22;font-weight:bold;">PROYECTO MI CALLE</span><br><hr style="margin:4px 0;">Distancia:<strong style="font-size:1.1em;color:#e67e22;">${dist.toFixed(2)} m</strong></div>`);
-                            bm.on('click', () => { if (measureLine) map.removeLayer(measureLine); measureLine = L.polyline([[checkLat, checkLon], [mcLat, mcLon]], { color: 'orange', dashArray: '10, 10', weight: 3, opacity: 0.8 }).addTo(map); });
-                            blackMarkers.push(bm); encontradosTotal++;
-                        }
-                    }
+                    if (!isNaN(mcLat) && !isNaN(mcLon)) procesarVecino(mcLat, mcLon, item, 'MICALLE');
                 });
             }
         }
 
-        // --- GESTIÓN INTELIGENTE DE ALERTAS ---
+        // --- ALERTAS ---
         let msgFinal = "";
         let iconoFinal = "⚠️";
 
-        // 1. Conflictos (SOLO SI HAY PELIGRO REAL < 70m)
         if (encontradosPeligro > 0) {
             iconoFinal = "🛑";
-            
-            // Texto de distancia dinámico
-            const textoDistancia = encontradosPeligro === 1 
-                ? `a <strong>${distanciaMasCercana.toFixed(2)} metros</strong>` 
-                : `a menos de ${RANGO_ALERTA} metros`;
+            const textoDistancia = encontradosPeligro === 1 ? `a <strong>${distanciaMasCercana.toFixed(2)} metros</strong>` : `a menos de ${RANGO_ALERTA} metros`;
 
             if (esBaseMiCalle) {
-                msgFinal += `
-                    <strong style="color:#F3C427; font-size:1.2em;">REFERENCIA CRUZADA</strong><br><br>
-                    Viendo tótem "Mi Calle".<br>
-                    Se encontraron <strong>${encontradosPeligro}</strong> tótems del proyecto MIS OJOS ${textoDistancia}.<br>
-                `;
+                msgFinal += `<strong style="color:#F3C427; font-size:1.2em;">REFERENCIA CRUZADA</strong><br><br>Viendo tótem "Mi Calle".<br>Se encontraron <strong>${encontradosPeligro}</strong> tótems del proyecto MIS OJOS ${textoDistancia}.<br>`;
             } else {
-                // TEXTO EXACTO SOLICITADO
-                msgFinal += `
-                    <strong style="color:#F3C427; font-size:1.2em;">⚠️ CRUCE DE PROYECTOS ⚠️</strong><br><br>
-                    Se encontraron <strong>${encontradosPeligro}</strong> tótems del proyecto "Mi Calle" ${textoDistancia}.<br><br>
-                    <span style="color:#ff4444; font-weight:bold; border:1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1); font-size:1.1em;">
-                        NO SE PUEDEN JUNTAR
-                    </span><br>
-                `;
+                msgFinal += `<strong style="color:#F3C427; font-size:1.2em;">⚠️ CRUCE DE PROYECTOS ⚠️</strong><br><br>Se encontraron <strong>${encontradosPeligro}</strong> tótems del proyecto "Mi Calle" ${textoDistancia}.<br><br><span style="color:#ff4444; font-weight:bold; border:1px solid #ff4444; padding: 4px 8px; border-radius: 4px; background: rgba(255,0,0,0.1); font-size:1.1em;">NO SE PUEDEN JUNTAR</span><br>`;
             }
         } 
 
-        // 2. Advertencia Previa
         if (advertenciaPrevia) {
-            if (msgFinal !== "") {
-                msgFinal += `<hr style="margin: 15px 0; border: 0; border-top: 1px dashed #666;">`;
-            }
+            if (msgFinal !== "") msgFinal += `<hr style="margin: 15px 0; border: 0; border-top: 1px dashed #666;">`;
             msgFinal += advertenciaPrevia;
         }
 
-        if (msgFinal !== "") {
-            window.showCustomAlert(msgFinal, iconoFinal);
-        }
+        if (msgFinal !== "") window.showCustomAlert(msgFinal, iconoFinal);
 
         actualizarInfoMapa(`${d.COLONIA}, ${d.ALCALDIA}`, origStr, coordsStr, distDisplay, distM, customLabel);
         setTimeout(() => map.invalidateSize(), 100); 
-     
     }
 </script>
 </body>
